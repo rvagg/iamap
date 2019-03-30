@@ -1,0 +1,27 @@
+{
+  "name": "iamap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "iamap.js",
+  "scripts": {
+    "test": "node level-test.js",
+    "docs": "jsdoc4readme --readme *.js"
+  },
+  "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "bl": "~3.0.0",
+    "multicodec": "~0.5.0"
+  },
+  "devDependencies": {
+    "cids": "~0.5.8",
+    "ipfs-block-service": "~0.15.2",
+    "ipfs-repo": "~0.26.4",
+    "ipld": "~0.22.0",
+    "jsdoc4readme": "~1.0.0",
+    "level": "~4.0.0",
+    "multihashing": "~0.3.3",
+    "murmurhash3js-revisited": "~3.0.0",
+    "rimraf": "~2.6.3"
+  }
+}
