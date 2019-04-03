@@ -4,7 +4,7 @@ An **I**mmutable **A**synchronous **Map**.
 
 ## Warning
 
-This is both **experimental** and a **work in progress**. This is not likely to be the current form. No guarantees are provided that serialised versions of today's version will be loadable in the future. This project may even be archived if significantly but improved forms are discovered or derived.
+This is both **experimental** and a **work in progress**. The current form is not likely to be the final form. No guarantees are provided that serialised versions of today's version will be loadable in the future. This project may even be archived if significantly improved forms are discovered or derived.
 
 However, rich documentation is provided as an invitation for collaboration to work on that final form; or as inspiration for alternative approaches to this problem space.
 
@@ -25,7 +25,7 @@ _Caveat emptor for versions less than 1.0.0._
 
 IAMap provides a `Map`-like interface that can organise data in a storage system that does not lend itself to organisation, such as a content addressed storage system like [IPFS](https://ipfs.io/) where you have to know the address of an element before you can fetch it.
 
-As a single entity, an IAMap instance is a collection of elements which are either entries (or buckets / arrays of entries) or are references to child nodes which themselves are IAMap instances. Large collections will form a deep graph of IAMap nodes referenced by a single IAMap root instance. The entries are key/value pairs, where the values could either be plain JavaScript objects (as long as they are serialisable themselves) or be references to objects within the datastore. Each node in an IAMap graph of nodes is serialised into the datastore. Therefore, a single ID / address / reference to the root node is all that is required to find elements within the collection.
+As a single entity, an IAMap instance is a collection of elements which are either entries (or buckets / arrays of entries) or are references to child nodes which themselves are IAMap instances. Large collections will form a deep graph of IAMap nodes referenced by a single IAMap root instance. The entries are key/value pairs, where the values could either be plain JavaScript objects (as long as they are serialisable themselves) or be references to objects within the datastore (or perhaps elsewhere!). Each node in an IAMap graph of nodes is serialised into the datastore. Therefore, a single ID / address / reference to the root node is all that is required to find elements within the collection and collections may be _very_ large.
 
 An IAMap is, therefore, a layer that provides a helpful key/value store on top of a storage system that does not inherently provide indexing facilities that allows easy fetch-by-key. In a content addressed store, such as IPFS, every item can only be fetched by its address, which is a hash of its content. Since those addresses may be derived from links within other pieces of content, we can build a data structure that becomes content and contains those links. Rather than `Store->Get(addressOfValue)` we can `Store->Get(iaMapRoot)->Get(key)` since there are many cases where `addressOfValue` is not known, or derivable ahead of time, but we can keep a single root address and use it to find any `key` within the generated IAMap structure.
 
@@ -49,7 +49,7 @@ While IAMap is intended to operate on top of IPLD, it is intentionally built ind
 
 ## Immutability
 
-IAMap instances cannot be mutated, once instantiated, you cannot (or should not) modify its properties. Therefore, mutation requires the creation of new instances. Every `map.set()` and `map.delete()` operation will result in a new IAMap instance, which will have a new, unique identifier. New instances created by mutations essentially perform a copy-on-write (CoW), so only the modified node and its parents are impacted, all reference to unmodified nodes remain intact as links.
+IAMap instances cannot be mutated, once instantiated, you cannot (or should not) modify its properties. Therefore, mutation requires the creation of new instances. Every `map.set()` and `map.delete()` operation will result in a new IAMap root node, which will have a new, unique identifier. New instances created by mutations essentially perform a copy-on-write (CoW), so only the modified node and its parents are impacted, all reference to unmodified nodes remain intact as links.
 
 Mutation on a large data set may involve the creation of many new internal nodes, as references between nodes form part of the "content" and therefore require new identifiers. This is handled transparently but users should be aware that many intermediate nodes are created in a backing store during mutation operations.
 
@@ -66,6 +66,8 @@ This implementation borrows heavily from the [Peergos](https://peergos.org/) [CH
 In summary: keys are hashed when inserted, fetched, modified or deleted in a HAMT. Each node of a HAMT sits at a particular level, or "depth". Each depth takes a different section of the hash to determine an index for the key. e.g. if each level takes 8-bits of the hash, then depth=0 takes the first 8 bits to form an index, which will be from 0 to 255. At depth=1, we take the _next_ 8 bits to determine a new index, and so on, until a place for the entry is found. An entry is inserted at the top-most node that has room for it. Each node can hold as many _elements_ as the hash portion (or "prefix") allows. So if 8-bits are used for each level, then each node can hold 256 elements. In the case of IAMap, each of those elements can also be "buckets", or an array of elements. When a new element is inserted, the insertion first attempts at the root node, which is depth=0. The root node will be considered "full" if there is no space at the index determined by the hash at depth=0. A classic HAMT will be "full" if that index already contains an entry. In this implementation, "full" means that the bucket at that index has reached the maximum size allowed. Once full, the element at that index is replaced with a new child-node, whose depth is incremented. All entries previously in the bucket at that index are then inserted into this new child node—however because the depth is incremented, a new portion of the hash of each element is used to determine its index. In this way, each node in the graph will contain a collection of either buckets (or entries) and references to child nodes. A good hash algorithm will distribute roughly evenly, making a densely packed data structure, where the density and height can be controlled by the number of bits of the hash used at each level and the maximum size of the buckets.
 
 CHAMP adds some optimisations that increase performance on in-memory HAMTs (it's not clear that these extend to HAMTs that are backed by a non-memory datastore) and also delete semantics such that there is a canonical graph for any given set of key/value pairs.
+
+Clear as mud? The code is heavily documented and you should be able to follow the algorithm in code form if you are so inclined.
 
 ## Pending questions
 
