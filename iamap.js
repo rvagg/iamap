@@ -1,3 +1,5 @@
+// Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
+
 const assert = require('assert')
 const { mask, setBit, bitmapHas, index } = require('./bit-utils')
 const multicodec = {
@@ -21,13 +23,13 @@ const hasherRegistry = {}
  * @name IAMap.create
  * @function
  * @async
- * @param {Object} store - A backing store for this Map. The store should be able to save and load a serialized
+ * @param {Object} store - A backing store for this Map. The store should be able to save and load a serialised
  * form of a single node of a IAMap which is provided as a plain object representation. `store.save(node)` takes
- * a serializable node and should return a content address / ID for the node. `store.load(id)` serves the inverse
- * purpose, taking a content address / ID as provided by a `save()` operation and returning the serialized form
+ * a serialisable node and should return a content address / ID for the node. `store.load(id)` serves the inverse
+ * purpose, taking a content address / ID as provided by a `save()` operation and returning the serialised form
  * of a node which can be instantiated by IAMap. In addition, a `store.isEqual(id1, id2)` method is required to
  * check the equality of the two content addresses / IDs (which may be custom for that data type).
- * The `store` object should take the following form: `{ save(node):id, load(id):node, isEqual(id,id):boolean }`
+ * The `store` object should take the following form: `{ async save(node):id, async load(id):node, isEqual(id,id):boolean }`
  * @param {Object} options - Options for this IAMap
  * @param {string} options.codec - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
  * hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with {@link IAMap.registerHasher}.
@@ -35,7 +37,8 @@ const hasherRegistry = {}
  * each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the element index, since 2^5=32,
  * each node will store up to 32 elements (child nodes and/or entry buckets). The maximum depth of the Map is
  * determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
- * produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes.
+ * produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
+ * currently allowed is `8` which will store 256 elements in each node.
  * @param {number} [options.bucketSize=8] - The maximum number of collisions acceptable at each level of the Map. A
  * collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
  * bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
@@ -52,7 +55,7 @@ async function create (store, options, dataMap, nodeMap, depth, elements) {
  * let map = await IAMap.load(store, id)
  * ```
  *
- * Create a IAMap instance loaded from a serialized form in a backing store. See {@link IAMap.create}.
+ * Create a IAMap instance loaded from a serialised form in a backing store. See {@link IAMap.create}.
  *
  * @name IAMap.load
  * @function
@@ -79,7 +82,7 @@ async function load (store, id) {
  * function identifier, e.g. `'murmur3-32'`.
  * @param {number} hasherBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
  * @param {function} hasher - A hash function that takes a `Buffer` derived from the `key` values used for this
- * Map and returns a `Buffer` (or a `Bufferlike, such that each element of the array contains a single byte value).
+ * Map and returns a `Buffer` (or a `Buffer`-like, such that each element of the array contains a single byte value).
  */
 function registerHasher (codec, hashBytes, hasher) {
   if (!multicodec.codes[codec]) {
@@ -108,11 +111,8 @@ class KV {
 
 KV.fromSerializable = function (obj) {
   assert(Array.isArray(obj))
-  if (obj.length === 2) {
-    return new KV(obj[0], obj[1])
-  } else {
-    assert.fail('badly formed kv')
-  }
+  assert.strictEqual(obj.length, 2)
+  return new KV(obj[0], obj[1])
 }
 
 // an element in the array of elements that each node holds, each
@@ -120,7 +120,7 @@ KV.fromSerializable = function (obj) {
 // or a link to a child node
 class Element {
   constructor (bucket, link) {
-    this.bucket = bucket !== undefined ? bucket : null
+    this.bucket = bucket || null
     this.link = link !== undefined ? link : null
     assert.strictEqual(this.bucket === null, this.link !== null)
   }
@@ -200,40 +200,47 @@ class IAMap {
     let hashBytes = hasherRegistry[options.codec].hashBytes
 
     if (typeof options.bitWidth === 'number') {
-      if (options.bitWidth <= 1 || options.bitWidth > hashBytes) {
+      if (options.bitWidth <= 1 || options.bitWidth > 8) {
         throw new TypeError('Invalid `bitWidth` option')
       }
       ro(config, 'bitWidth', options.bitWidth)
+    } else if (options.bitWidth !== undefined) {
+      throw new TypeError('Invalid `bitWidth` option')
     } else {
       ro(config, 'bitWidth', defaultBitWidth)
     }
-    if (depth > Math.floor((hashBytes * 8) / this.config.bitWidth)) {
+
+    if (typeof options.bucketSize === 'number') {
+      if (options.bucketSize < 2) {
+        throw new TypeError('Invalid `bucketSize` option')
+      }
+      ro(config, 'bucketSize', options.bucketSize)
+    } else if (options.bucketSize !== undefined) {
+      throw new TypeError('Invalid `bucketSize` option')
+    } else {
+      ro(config, 'bucketSize', defaultBucketSize)
+    }
+
+    if (dataMap !== undefined && typeof dataMap !== 'number') {
+      throw new TypeError('`dataMap` must be a Number')
+    }
+    ro(this, 'dataMap', dataMap || 0)
+
+    if (nodeMap !== undefined && typeof nodeMap !== 'number') {
+      throw new TypeError('`nodeMap` must be a Number')
+    }
+    ro(this, 'nodeMap', nodeMap || 0)
+
+    if (depth !== undefined && typeof depth !== 'number') {
+      throw new TypeError('`depth` must be a Number')
+    }
+    ro(this, 'depth', depth || 0)
+    if (this.depth > Math.floor((hashBytes * 8) / this.config.bitWidth)) {
       // our hasher only has `hashBytes` to work with and we take off `bitWidth` bits with each level
       // e.g. 32-byte hash gives us a maximum depth of 51 levels
       throw new Error('Overflow: maximum tree depth reached')
     }
 
-    if (typeof options.bucketSize === 'number') {
-      if (options.bucketSize <= 0) {
-        throw new TypeError('Invalid `bucketSize` option')
-      }
-      ro(config, 'bucketSize', options.bucketSize)
-    } else {
-      ro(config, 'bucketSize', defaultBucketSize)
-    }
-
-    ro(this, 'dataMap', dataMap || 0)
-    if (typeof this.dataMap !== 'number') {
-      throw new TypeError('`dataMap` must be a Number')
-    }
-    ro(this, 'nodeMap', nodeMap || 0)
-    if (typeof this.nodeMap !== 'number') {
-      throw new TypeError('`nodeMap` must be a Number')
-    }
-    ro(this, 'depth', typeof depth !== 'number' ? 0 : depth)
-    if (typeof this.depth !== 'number') {
-      throw new TypeError('`nodeMap` must be a Number')
-    }
     ro(this, 'elements', Object.freeze(elements || []))
     for (let e of this.elements) {
       if (!(e instanceof Element)) {
@@ -248,7 +255,7 @@ class IAMap {
    * @param {(string|array|Buffer|ArrayBuffer)} key - A key for the `value` being set whereby that same `value` may
    * be retrieved with a `get()` operation with the same `key`. The type of the `key` object should either be a
    * `Buffer` or be convertable to a `Buffer` via [`Buffer.from()`](https://nodejs.org/api/buffer.html).
-   * @param {any} value - Any value that can be stored in the backing store. A value could be a serializable object
+   * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
    * or an address or content address or other kind of link to the actual value.
    * @returns {Promise<IAMap>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
    * @async
@@ -334,7 +341,7 @@ class IAMap {
    * @async
    */
   async has (key) {
-    return this.get(key) != null
+    return (await this.get(key)) !== null
   }
 
   /**
@@ -358,7 +365,7 @@ class IAMap {
     if (bitmapHas(this.dataMap, bitpos)) { // should be in a bucket in this node
       return findDataElement(this, bitpos, key, async (found, elementAt, element, bucketIndex, bucketEntry) => {
         if (found) {
-          if (this.depth !== 0 && this.nodeCount() === 0 && this.entryCount() === this.config.bucketSize + 1) {
+          if (this.depth !== 0 && this.directNodeCount() === 0 && this.directEntryCount() === this.config.bucketSize + 1) {
             // current node will only have this.config.bucketSize entries spread across its buckets
             // and no child nodes, so wrap up the remaining nodes in a fresh IAMap at depth 0, it will
             // bubble up to either become the new root node or be unpacked by a higher level
@@ -391,9 +398,9 @@ class IAMap {
 
         assert(newChild.elements.length > 0) // something probably went wrong in the dataMap block above
 
-        if (newChild.nodeCount() === 0 && newChild.entryCount() === this.config.bucketSize) {
+        if (newChild.directNodeCount() === 0 && newChild.directEntryCount() === this.config.bucketSize) {
           // child got collapsed
-          if (this.nodeCount() === 1 && this.entryCount() === 0) {
+          if (this.directNodeCount() === 1 && this.directEntryCount() === 0) {
             // we only had one node to collapse and the child was collapsible so end up acting the same
             // as the child, bubble it up and it either becomes the new root or finds a parent to collapse
             // in to (next section)
@@ -473,6 +480,26 @@ class IAMap {
   }
 
   /**
+   * Asynchronously emit all { key, value } pairs that exist within this `IAMap`, including its children. This will
+   * cause a full traversal of all nodes.
+   *
+   * @returns {AsyncIterator} An async iterator that yields objects with the properties `key` and `value`.
+   * @async
+   */
+  async * entries () {
+    for (let e of this.elements) {
+      if (e.bucket) {
+        for (let kv of e.bucket) {
+          yield { key: kv.key, value: kv.value }
+        }
+      } else {
+        let child = await load(this.store, e.link)
+        yield * child.entries()
+      }
+    }
+  }
+
+  /**
    * Asynchronously emit the IDs of this `IAMap` and all of its children.
    *
    * @returns {AsyncIterator} An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
@@ -488,34 +515,13 @@ class IAMap {
     }
   }
 
-  // not as useful as it looks right now
-  async stats () {
-    let stats = {
-      entries: this.entryCount(),
-      nodes: 1,
-      maxDepth: this.depth
-    }
-
-    for (let e of this.elements) {
-      if (e.link) {
-        let child = await load(this.store, e.link)
-        let childStats = await child.stats()
-        stats.entries += childStats.entries
-        stats.nodes += childStats.nodes
-        stats.maxDepth = Math.max(stats.maxDepth, childStats.maxDepth)
-      }
-    }
-
-    return stats
-  }
-
   /**
-   * Returns a serializable form of this `IAMap` node. The internal representation of this local node is copied into a plain
+   * Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
    * JavaScript `Object` including a representation of its elements array that the key/value pairs it contains as well as
    * the identifiers of child nodes.
-   * The backing store can use this representation to create a suitable serialized form. When loading from the backing store,
+   * The backing store can use this representation to create a suitable serialised form. When loading from the backing store,
    * `IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object.
-   * For content addressable backing stores, it is expected that the same data in this serializable form will always produce
+   * For content addressable backing stores, it is expected that the same data in this serialisable form will always produce
    * the same identifier.
    *
    * ```
@@ -561,7 +567,7 @@ class IAMap {
    *
    * @returns {number} A number representing the number of local entries.
    */
-  entryCount () {
+  directEntryCount () {
     return this.elements.reduce((p, c) => {
       return p + (c.bucket ? c.bucket.length : 0)
     }, 0)
@@ -569,11 +575,11 @@ class IAMap {
 
   /**
    * Calculate the number of child nodes linked by this node. Performs a scan of the local entries and tallies up the
-   * ones containing links.
+   * ones containing links to child nodes.
    *
    * @returns {number} A number representing the number of direct child nodes
    */
-  nodeCount () {
+  directNodeCount () {
     return this.elements.reduce((p, c) => {
       return p + (c.link ? 1 : 0)
     }, 0)
@@ -582,7 +588,7 @@ class IAMap {
   /**
    * Asynchronously perform a check on this node and its children that it is in canonical format for the current data.
    * As this uses `size()` to calculate the total number of entries in this node and its children, it performs a full
-   * scan of nodes and therefore incurs a load and deserialization cost for each child node.
+   * scan of nodes and therefore incurs a load and deserialisation cost for each child node.
    * A `false` result from this method suggests a flaw in the implemetation.
    *
    * @async
@@ -590,8 +596,8 @@ class IAMap {
    */
   async isInvariant () {
     let size = await this.size()
-    let entryArity = this.entryCount()
-    let nodeArity = this.nodeCount()
+    let entryArity = this.directEntryCount()
+    let nodeArity = this.directNodeCount()
     let arity = entryArity + nodeArity
     let sizePredicate = 2 // 2 == 'more than one'
     if (nodeArity === 0) {

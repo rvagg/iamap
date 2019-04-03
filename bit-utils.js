@@ -1,3 +1,5 @@
+// Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
+
 const assert = require('assert')
 
 // mask off `nbits` bits at `depth` position of `hash` where `hash` is a UInt8Array-like
@@ -44,57 +46,3 @@ module.exports.mask = mask
 module.exports.setBit = setBit
 module.exports.bitmapHas = bitmapHas
 module.exports.index = index
-
-if (require.main === module) {
-  assert.strictEqual(mask([0b11111111], 0, 5), 0b11111)
-  assert.strictEqual(mask([0b10101010], 0, 5), 0b1010)
-  assert.strictEqual(mask([0b00000001], 0, 5), 0b1)
-  assert.strictEqual(mask([0b00010000], 0, 5), 0b10000)
-  assert.strictEqual(mask([0b1001000010000100], 0, 9), 0b010000100)
-  assert.strictEqual(mask([0b1010101010101010], 0, 9), 0b010101010)
-
-  assert(!bitmapHas(0b0, 0))
-  assert(!bitmapHas(0b0, 1))
-  assert(bitmapHas(0b1, 0))
-  assert(!bitmapHas(0b1, 1))
-  assert(!bitmapHas(0b101010, 2))
-  assert(bitmapHas(0b101010, 3))
-  assert(!bitmapHas(0b101010, 4))
-  assert(bitmapHas(0b101010, 5))
-  assert(bitmapHas(0b100000, 5))
-  assert(bitmapHas(0b0100000, 5))
-  assert(bitmapHas(0b00100000, 5))
-
-  assert.strictEqual(index(0b111111, 0), 0)
-  assert.strictEqual(index(0b111111, 1), 1)
-  assert.strictEqual(index(0b111111, 2), 2)
-  assert.strictEqual(index(0b111111, 4), 4)
-  assert.strictEqual(index(0b111100, 2), 0)
-  assert.strictEqual(index(0b111101, 4), 3)
-  assert.strictEqual(index(0b111001, 4), 2)
-  assert.strictEqual(index(0b111000, 4), 1)
-  assert.strictEqual(index(0b110000, 4), 0)
-  // new node, no bitmask, insertion at the start
-  assert.strictEqual(index(0b000000, 0), 0)
-  assert.strictEqual(index(0b000000, 1), 0)
-  assert.strictEqual(index(0b000000, 2), 0)
-  assert.strictEqual(index(0b000000, 3), 0)
-
-  assert.strictEqual(setBit(0b0, 0, 1), 0b00000001)
-  assert.strictEqual(setBit(0b0, 1, 1), 0b00000010)
-  assert.strictEqual(setBit(0b0, 7, 1), 0b10000000)
-  assert.strictEqual(setBit(0b11111111, 0, 1), 0b11111111)
-  assert.strictEqual(setBit(0b11111111, 7, 1), 0b11111111)
-  assert.strictEqual(setBit(0b01010101, 1, 1), 0b01010111)
-  assert.strictEqual(setBit(0b01010101, 7, 1), 0b11010101)
-  assert.strictEqual(setBit(0b11111111, 0, 0), 0b11111110)
-  assert.strictEqual(setBit(0b11111111, 1, 0), 0b11111101)
-  assert.strictEqual(setBit(0b11111111, 7, 0), 0b01111111)
-  assert.strictEqual(setBit(0b0, 0, 0), 0b00000000)
-  assert.strictEqual(setBit(0b0, 7, 0), 0b00000000)
-  assert.strictEqual(setBit(0b01010101, 0, 0), 0b01010100)
-  assert.strictEqual(setBit(0b01010101, 6, 0), 0b00010101)
-  assert.strictEqual(setBit(0b1100001011010010010010100000001, 0, 0), 0b1100001011010010010010100000000)
-  assert.strictEqual(setBit(0b1100001011010010010010100000000, 0, 1), 0b1100001011010010010010100000001)
-  assert.strictEqual(setBit(0b0, 31, 1), -0b10000000000000000000000000000000)
-}
