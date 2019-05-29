@@ -14,7 +14,6 @@ test('empty object', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -43,7 +42,6 @@ test('test basic set/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -52,7 +50,6 @@ test('test basic set/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: newMap.dataMap,
     nodeMap: 0,
     elements: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
@@ -83,7 +80,6 @@ test('test basic set/set-same/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -92,7 +88,6 @@ test('test basic set/set-same/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: newMap1.dataMap,
     nodeMap: 0,
     elements: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
@@ -126,7 +121,6 @@ test('test basic set/update/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -135,7 +129,6 @@ test('test basic set/update/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: newMap1.dataMap,
     nodeMap: 0,
     elements: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
@@ -145,7 +138,6 @@ test('test basic set/update/get', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: newMap1.dataMap,
     nodeMap: 0,
     elements: [ [ [ Buffer.from('foo'), 'baz' ] ] ]
@@ -179,7 +171,6 @@ test('test basic set/get/delete', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -188,7 +179,6 @@ test('test basic set/get/delete', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: setMap.dataMap,
     nodeMap: 0,
     elements: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
@@ -328,7 +318,7 @@ test('test predictable fill vertical and collapse', async (t) => {
   map = await map.delete(Buffer.from([ k, k, k, 3 ]))
   await validateBaseForm(map)
 
-  // put the awkward one back to re-create the 7-node depth
+// put the awkward one back to re-create the 7-node depth
   map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
   // put one at level 5 so we don't collapse all the way
   map = await map.set(Buffer.from([ k, k, 0, 0 ]), 'pos2+0+0')

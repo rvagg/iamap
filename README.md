@@ -105,7 +105,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 ### Contents
 
  * [`async IAMap.create(store, options)`](#IAMap__create)
- * [`async IAMap.load(store, id)`](#IAMap__load)
+ * [`async IAMap.load(store, id[, depth])`](#IAMap__load)
  * [`IAMap.registerHasher(codec, hasherBytes, hasher)`](#IAMap__registerHasher)
  * [`class IAMap`](#IAMap)
  * [`async IAMap#set(key, value)`](#IAMap_set)
@@ -156,7 +156,7 @@ resolves to a `IAMap` instance.
     pushed
 
 <a name="IAMap__load"></a>
-### `async IAMap.load(store, id)`
+### `async IAMap.load(store, id[, depth])`
 
 ```js
 let map = await IAMap.load(store, id)
@@ -168,6 +168,8 @@ Create a IAMap instance loaded from a serialised form in a backing store. See [`
 
 * **`store`** _(`Object`)_: A backing store for this Map. [`IAMap.create`](#IAMap__create).
 * **`id`**: An content address / ID understood by the backing `store`.
+* **`depth`** _(`number`, optional, default=`0`)_: The depth in the tree that this node is located, primarily used internally for
+  loading intermediate nodes
 
 <a name="IAMap__registerHasher"></a>
 ### `IAMap.registerHasher(codec, hasherBytes, hasher)`
@@ -203,10 +205,10 @@ The `IAMap` constructor should not be used directly. Use `IAMap.create()` or `IA
   * **`config.bitWidth`** _(`number`)_: The number of bits used at each level of this `IAMap`. See [`IAMap.create`](#IAMap__create)
     for more details.
   * **`config.bucketSize`** _(`number`)_: TThe maximum number of collisions acceptable at each level of the Map.
-* **`dataMap`** _(`number`, optional)_: Bitmap indicating which slots are occupied by data entries, each data entry
+* **`dataMap`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by data entries, each data entry
   contains an bucket of entries
-* **`nodeMap`** _(`number`, optional)_: Bitmap indicating which slots are occupied by child nodes
-* **`depth`** _(`number`, optional)_: Depth of the current node in the IAMap, `depth` is used to extract bits from the
+* **`nodeMap`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by child nodes
+* **`depth`** _(`number`, optional, default=`0`)_: Depth of the current node in the IAMap, `depth` is used to extract bits from the
   key hashes to locate slots
 * **`elements`** _(`Array`, optional, default=`[]`)_: Array of elements (an internal `Element` type), each of which contains a
   bucket of entries or an ID of a child node
@@ -323,7 +325,6 @@ the same identifier.
   codec: Buffer
   bitWidth: number
   bucketSize: number
-  depth: number
   dataMap: number
   nodeMap: number
   elements: Array

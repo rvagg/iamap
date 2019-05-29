@@ -19,7 +19,6 @@ test(`fill with ${PEAK} and empty`, async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []

@@ -13,8 +13,12 @@
     "multicodec": "~0.5.0"
   },
   "devDependencies": {
-    "jsdoc4readme": "~1.1.0",
+    "jsdoc4readme": "~1.1.1",
     "murmurhash3js-revisited": "~3.0.0",
     "tap": "~12.6.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rvagg/iamap.git"
   }
 }

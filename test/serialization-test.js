@@ -16,7 +16,6 @@ test('empty object', async (t) => {
     codec: Buffer.from([ 0x23 ]),
     bitWidth: 5,
     bucketSize: 8,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -36,7 +35,6 @@ test('empty custom', async (t) => {
     codec: Buffer.from([ 0 ]), // identity
     bitWidth: 8,
     bucketSize: 3,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -60,7 +58,6 @@ test('malformed', async (t) => {
     codec: Buffer.from([ 10 ]), // not registered
     bitWidth: 8,
     bucketSize: 3,
-    depth: 0,
     dataMap: 0,
     nodeMap: 0,
     elements: []
@@ -110,18 +107,15 @@ test('malformed', async (t) => {
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.dataMap = 0
-  emptySerialized.depth = 'foo'
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(IAMap.load(store, id, 'foo'))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.depth = 0
   emptySerialized.elements = [ { woot: 'nope' } ]
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.depth = 0
   emptySerialized.elements = [ [ { nope: 'nope' } ] ]
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
@@ -129,14 +123,12 @@ test('malformed', async (t) => {
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.elements = []
   emptySerialized.bitWidth = 8
-  emptySerialized.depth = 32 // this is OK for bitWidth of 8 and hash bytes of 32
   id = await store.save(emptySerialized)
-  t.resolves(IAMap.load(store, id))
+  t.resolves(IAMap.load(store, id, 32)) // this is OK for bitWidth of 8 and hash bytes of 32
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.depth = 33 // this is not OK for a bitWidth of 8 and hash bytes of 32
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(IAMap.load(store, id, 33)) // this is not OK for a bitWidth of 8 and hash bytes of 32
 
   t.throws(() => new Constructor(store, { codec: 'identity' }, 0, 0, 0, [ { nope: 'nope' } ]))
 })

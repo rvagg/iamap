@@ -62,10 +62,12 @@ async function create (store, options, dataMap, nodeMap, depth, elements) {
  * @async
  * @param {Object} store - A backing store for this Map. {@link IAMap.create}.
  * @param id - An content address / ID understood by the backing `store`.
+ * @param {number} [depth=0] - The depth in the tree that this node is located, primarily used internally for
+ * loading intermediate nodes
 */
-async function load (store, id) {
+async function load (store, id, depth = 0) {
   let serialized = await store.load(id)
-  return IAMap.fromSerializable(id, serialized, store)
+  return IAMap.fromSerializable(store, id, depth, serialized)
 }
 
 /**
@@ -289,7 +291,7 @@ class IAMap {
       })
     } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
       return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link)
+        let child = await load(this.store, element.link, this.depth + 1)
         assert(child)
         let newChild = await child.set(key, value)
         return updateNode(this, elementAt, key, newChild)
@@ -322,7 +324,7 @@ class IAMap {
       })
     } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
       return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link)
+        let child = await load(this.store, element.link, this.depth + 1)
         assert(child)
         return child.get(key)
       })
@@ -389,7 +391,7 @@ class IAMap {
       })
     } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
       return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link)
+        let child = await load(this.store, element.link, this.depth + 1)
         assert(child)
         let newChild = await child.delete(key)
         if (this.store.isEqual(newChild.id, element.link)) { // no modification
@@ -431,7 +433,7 @@ class IAMap {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        let child = await load(this.store, e.link)
+        let child = await load(this.store, e.link, this.depth + 1)
         c += await child.size()
       }
     }
@@ -453,7 +455,7 @@ class IAMap {
           yield kv.key
         }
       } else {
-        let child = await load(this.store, e.link)
+        let child = await load(this.store, e.link, this.depth + 1)
         yield * child.keys()
       }
     }
@@ -473,7 +475,7 @@ class IAMap {
           yield kv.value
         }
       } else {
-        let child = await load(this.store, e.link)
+        let child = await load(this.store, e.link, this.depth + 1)
         yield * child.values()
       }
     }
@@ -493,7 +495,7 @@ class IAMap {
           yield { key: kv.key, value: kv.value }
         }
       } else {
-        let child = await load(this.store, e.link)
+        let child = await load(this.store, e.link, this.depth + 1)
         yield * child.entries()
       }
     }
@@ -509,7 +511,7 @@ class IAMap {
     yield this.id
     for (let e of this.elements) {
       if (e.link) {
-        let child = await load(this.store, e.link)
+        let child = await load(this.store, e.link, this.depth + 1)
         yield * child.ids()
       }
     }
@@ -529,7 +531,6 @@ class IAMap {
    *   codec: Buffer
    *   bitWidth: number
    *   bucketSize: number
-   *   depth: number
    *   dataMap: number
    *   nodeMap: number
    *   elements: Array
@@ -551,7 +552,6 @@ class IAMap {
       codec: multicodec.codes[this.config.codec],
       bitWidth: this.config.bitWidth,
       bucketSize: this.config.bucketSize,
-      depth: this.depth,
       dataMap: this.dataMap,
       nodeMap: this.nodeMap
     }
@@ -778,7 +778,7 @@ async function collapseNodeInline (node, bitpos, newNode) {
 }
 
 // MUST be symmetrical with IAMap#toSerializable()
-IAMap.fromSerializable = function (id, obj, store) {
+IAMap.fromSerializable = function (store, id, depth, obj) {
   assert(Buffer.isBuffer(obj.codec))
   let options = {
     codec: multicodec.names[obj.codec.toString('hex')],
@@ -787,7 +787,7 @@ IAMap.fromSerializable = function (id, obj, store) {
   }
   assert(Array.isArray(obj.elements))
   let elements = obj.elements.map(Element.fromSerializable)
-  let node = new IAMap(store, options, obj.dataMap, obj.nodeMap, obj.depth, elements)
+  let node = new IAMap(store, options, obj.dataMap, obj.nodeMap, depth, elements)
   ro(node, 'id', id)
   return node
 }
