@@ -246,7 +246,8 @@ test('test predictable single level fill', async (t) => {
 
 test('test predictable fill vertical and collapse', async (t) => {
   const store = memoryStore()
-  let map = await IAMap.create(store, { codec: 'identity', bitWidth: 4, bucketSize: 2 })
+  const options = { codec: 'identity', bitWidth: 4, bucketSize: 2 }
+  let map = await IAMap.create(store, options)
 
   let k = (2 << 4) | 2
   // an 8-bit value with `2` in each of the 4-bit halves, for a `bitWidth` of 4 we are going to collide at
@@ -295,7 +296,7 @@ test('test predictable fill vertical and collapse', async (t) => {
     t.strictEqual(child.elements.length, 1)
     t.strictEqual(child.elements[0].bucket, null)
     t.strictEqual(typeof child.elements[0].link, 'number')
-    child = await IAMap.load(store, child.elements[0].link)
+    child = await IAMap.load(store, child.elements[0].link, i + 1, options)
   }
   // at the 7th level they all have a different hash portion: 1,2,3 so they should be in separate buckets
   t.strictEqual(child.elements.length, 3)
@@ -318,7 +319,7 @@ test('test predictable fill vertical and collapse', async (t) => {
   map = await map.delete(Buffer.from([ k, k, k, 3 ]))
   await validateBaseForm(map)
 
-// put the awkward one back to re-create the 7-node depth
+  // put the awkward one back to re-create the 7-node depth
   map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
   // put one at level 5 so we don't collapse all the way
   map = await map.set(Buffer.from([ k, k, 0, 0 ]), 'pos2+0+0')
@@ -340,7 +341,7 @@ test('test predictable fill vertical and collapse', async (t) => {
     t.strictEqual(child.elements.length, 1)
     t.strictEqual(child.elements[0].bucket, null)
     t.strictEqual(typeof child.elements[0].link, 'number')
-    child = await IAMap.load(store, child.elements[0].link)
+    child = await IAMap.load(store, child.elements[0].link, i + 1, options)
   }
 
   t.strictEqual(child.nodeMap, 0)
@@ -362,7 +363,8 @@ test('test predictable fill vertical and collapse', async (t) => {
 
 test('test predictable fill vertical, switched delete', async (t) => {
   const store = memoryStore()
-  let map = await IAMap.create(store, { codec: 'identity', bitWidth: 4, bucketSize: 2 })
+  const options = { codec: 'identity', bitWidth: 4, bucketSize: 2 }
+  let map = await IAMap.create(store, options)
   let k = (2 << 4) | 2
   // 3 elements at the lowest node, one part way back up, like last test
   map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
@@ -381,7 +383,7 @@ test('test predictable fill vertical, switched delete', async (t) => {
     t.strictEqual(child.elements.length, 1)
     t.strictEqual(child.elements[0].bucket, null)
     t.strictEqual(typeof child.elements[0].link, 'number')
-    child = await IAMap.load(store, child.elements[0].link)
+    child = await IAMap.load(store, child.elements[0].link, i + 1, options)
   }
 
   // last level should have 2 buckets but with a bucket in 0 and a node in 2
@@ -404,7 +406,8 @@ test('test predictable fill vertical, switched delete', async (t) => {
 
 test('test predictable fill vertical, larger buckets', async (t) => {
   const store = memoryStore()
-  let map = await IAMap.create(store, { codec: 'identity', bitWidth: 4, bucketSize: 4 })
+  const options = { codec: 'identity', bitWidth: 4, bucketSize: 4 }
+  let map = await IAMap.create(store, options)
   let k = (6 << 4) | 6 // let's try index 6 now
 
   // we're trying to trigger a compaction of a node which has a bucket of >1 elements, the first
@@ -432,7 +435,7 @@ test('test predictable fill vertical, larger buckets', async (t) => {
     t.strictEqual(child.elements.length, 1)
     t.strictEqual(child.elements[0].bucket, null)
     t.strictEqual(typeof child.elements[0].link, 'number')
-    child = await IAMap.load(store, child.elements[0].link)
+    child = await IAMap.load(store, child.elements[0].link, i + 1, options)
   }
 
   // last level should have 2 buckets but with a bucket in 0 and a node in 2

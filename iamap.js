@@ -62,12 +62,14 @@ async function create (store, options, dataMap, nodeMap, depth, elements) {
  * @async
  * @param {Object} store - A backing store for this Map. {@link IAMap.create}.
  * @param id - An content address / ID understood by the backing `store`.
- * @param {number} [depth=0] - The depth in the tree that this node is located, primarily used internally for
- * loading intermediate nodes
-*/
-async function load (store, id, depth = 0) {
+ */
+async function load (store, id, depth = 0, options) {
+  // depth and options are internal arguments that the user doesn't need to interact with
+  if (depth !== 0 && typeof options !== 'object') {
+    throw new Error('Cannot load() without options at depth > 0')
+  }
   let serialized = await store.load(id)
-  return IAMap.fromSerializable(store, id, depth, serialized)
+  return IAMap.fromSerializable(store, id, depth, options, serialized)
 }
 
 /**
@@ -291,7 +293,7 @@ class IAMap {
       })
     } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
       return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link, this.depth + 1)
+        let child = await load(this.store, element.link, this.depth + 1, this.config)
         assert(child)
         let newChild = await child.set(key, value)
         return updateNode(this, elementAt, key, newChild)
@@ -324,7 +326,7 @@ class IAMap {
       })
     } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
       return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link, this.depth + 1)
+        let child = await load(this.store, element.link, this.depth + 1, this.config)
         assert(child)
         return child.get(key)
       })
@@ -391,7 +393,7 @@ class IAMap {
       })
     } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
       return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link, this.depth + 1)
+        let child = await load(this.store, element.link, this.depth + 1, this.config)
         assert(child)
         let newChild = await child.delete(key)
         if (this.store.isEqual(newChild.id, element.link)) { // no modification
@@ -433,7 +435,7 @@ class IAMap {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        let child = await load(this.store, e.link, this.depth + 1)
+        let child = await load(this.store, e.link, this.depth + 1, this.config)
         c += await child.size()
       }
     }
@@ -455,7 +457,7 @@ class IAMap {
           yield kv.key
         }
       } else {
-        let child = await load(this.store, e.link, this.depth + 1)
+        let child = await load(this.store, e.link, this.depth + 1, this.config)
         yield * child.keys()
       }
     }
@@ -475,7 +477,7 @@ class IAMap {
           yield kv.value
         }
       } else {
-        let child = await load(this.store, e.link, this.depth + 1)
+        let child = await load(this.store, e.link, this.depth + 1, this.config)
         yield * child.values()
       }
     }
@@ -495,7 +497,7 @@ class IAMap {
           yield { key: kv.key, value: kv.value }
         }
       } else {
-        let child = await load(this.store, e.link, this.depth + 1)
+        let child = await load(this.store, e.link, this.depth + 1, this.config)
         yield * child.entries()
       }
     }
@@ -511,7 +513,7 @@ class IAMap {
     yield this.id
     for (let e of this.elements) {
       if (e.link) {
-        let child = await load(this.store, e.link, this.depth + 1)
+        let child = await load(this.store, e.link, this.depth + 1, this.config)
         yield * child.ids()
       }
     }
@@ -521,16 +523,29 @@ class IAMap {
    * Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
    * JavaScript `Object` including a representation of its elements array that the key/value pairs it contains as well as
    * the identifiers of child nodes.
+   * Root nodes (depth==0) contain the full map configuration information, while intermediate and leaf nodes contain only
+   * data that cannot be inferred by traversal from a root node that already has this data (codec, bitWidth and bucketSize).
    * The backing store can use this representation to create a suitable serialised form. When loading from the backing store,
-   * `IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object.
+   * `IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object. Where
+   * root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
    * For content addressable backing stores, it is expected that the same data in this serialisable form will always produce
    * the same identifier.
    *
+   * Root node form:
    * ```
    * {
    *   codec: Buffer
    *   bitWidth: number
    *   bucketSize: number
+   *   dataMap: number
+   *   nodeMap: number
+   *   elements: Array
+   * }
+   * ```
+   *
+   * Intermediate and leaf node form:
+   * ```
+   * {
    *   dataMap: number
    *   nodeMap: number
    *   elements: Array
@@ -549,11 +564,13 @@ class IAMap {
    */
   toSerializable () {
     let r = {
-      codec: multicodec.codes[this.config.codec],
-      bitWidth: this.config.bitWidth,
-      bucketSize: this.config.bucketSize,
       dataMap: this.dataMap,
       nodeMap: this.nodeMap
+    }
+    if (this.depth === 0) {
+      r.codec = multicodec.codes[this.config.codec]
+      r.bitWidth = this.config.bitWidth
+      r.bucketSize = this.config.bucketSize
     }
     r.elements = this.elements.map((e) => {
       return e.toSerializable()
@@ -778,12 +795,19 @@ async function collapseNodeInline (node, bitpos, newNode) {
 }
 
 // MUST be symmetrical with IAMap#toSerializable()
-IAMap.fromSerializable = function (store, id, depth, obj) {
-  assert(Buffer.isBuffer(obj.codec))
-  let options = {
-    codec: multicodec.names[obj.codec.toString('hex')],
-    bitWidth: obj.bitWidth,
-    bucketSize: obj.bucketSize
+IAMap.fromSerializable = function (store, id, depth, options, obj) {
+  if (depth === 0) { // even if options were supplied, ignore them and use what's in the obj
+    if (!Buffer.isBuffer(obj.codec) || typeof obj.bitWidth !== 'number' || typeof obj.bucketSize !== 'number') {
+      throw new Error('Object does not appear to be an IAMap root (depth==0)')
+    }
+    options = {
+      codec: multicodec.names[obj.codec.toString('hex')],
+      bitWidth: obj.bitWidth,
+      bucketSize: obj.bucketSize
+    }
+  }
+  if (Buffer.isBuffer(options.codec)) {
+    options.codec = multicodec.names[options.codec.toString('hex')]
   }
   assert(Array.isArray(obj.elements))
   let elements = obj.elements.map(Element.fromSerializable)

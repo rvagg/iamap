@@ -105,7 +105,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 ### Contents
 
  * [`async IAMap.create(store, options)`](#IAMap__create)
- * [`async IAMap.load(store, id[, depth])`](#IAMap__load)
+ * [`async IAMap.load(store, id)`](#IAMap__load)
  * [`IAMap.registerHasher(codec, hasherBytes, hasher)`](#IAMap__registerHasher)
  * [`class IAMap`](#IAMap)
  * [`async IAMap#set(key, value)`](#IAMap_set)
@@ -156,7 +156,7 @@ resolves to a `IAMap` instance.
     pushed
 
 <a name="IAMap__load"></a>
-### `async IAMap.load(store, id[, depth])`
+### `async IAMap.load(store, id)`
 
 ```js
 let map = await IAMap.load(store, id)
@@ -168,8 +168,6 @@ Create a IAMap instance loaded from a serialised form in a backing store. See [`
 
 * **`store`** _(`Object`)_: A backing store for this Map. [`IAMap.create`](#IAMap__create).
 * **`id`**: An content address / ID understood by the backing `store`.
-* **`depth`** _(`number`, optional, default=`0`)_: The depth in the tree that this node is located, primarily used internally for
-  loading intermediate nodes
 
 <a name="IAMap__registerHasher"></a>
 ### `IAMap.registerHasher(codec, hasherBytes, hasher)`
@@ -315,16 +313,29 @@ Asynchronously emit the IDs of this `IAMap` and all of its children.
 Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
 JavaScript `Object` including a representation of its elements array that the key/value pairs it contains as well as
 the identifiers of child nodes.
+Root nodes (depth==0) contain the full map configuration information, while intermediate and leaf nodes contain only
+data that cannot be inferred by traversal from a root node that already has this data (codec, bitWidth and bucketSize).
 The backing store can use this representation to create a suitable serialised form. When loading from the backing store,
-`IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object.
+`IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object. Where
+root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
 For content addressable backing stores, it is expected that the same data in this serialisable form will always produce
 the same identifier.
 
+Root node form:
 ```
 {
   codec: Buffer
   bitWidth: number
   bucketSize: number
+  dataMap: number
+  nodeMap: number
+  elements: Array
+}
+```
+
+Intermediate and leaf node form:
+```
+{
   dataMap: number
   nodeMap: number
   elements: Array
