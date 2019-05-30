@@ -832,3 +832,4 @@ function hasher (map) {
 module.exports.create = create
 module.exports.load = load
 module.exports.registerHasher = registerHasher
+module.exports.fromSerializable = IAMap.fromSerializable
