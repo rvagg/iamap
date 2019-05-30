@@ -121,6 +121,10 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`IAMap#directEntryCount()`](#IAMap_directEntryCount)
  * [`IAMap#directNodeCount()`](#IAMap_directNodeCount)
  * [`async IAMap#isInvariant()`](#IAMap_isInvariant)
+ * [`IAMap#fromChildSerializable(store, id, serializable[, depth])`](#IAMap_fromChildSerializable)
+ * [`IAMap.isRootSerializable(serializable)`](#IAMap__isRootSerializable)
+ * [`IAMap.isSerializable(serializable)`](#IAMap__isSerializable)
+ * [`IAMap.fromSerializable(store, id, serializable[, options][, depth])`](#IAMap__fromSerializable)
 
 <a name="IAMap__create"></a>
 ### `async IAMap.create(store, options)`
@@ -166,7 +170,7 @@ Create a IAMap instance loaded from a serialised form in a backing store. See [`
 
 **Parameters:**
 
-* **`store`** _(`Object`)_: A backing store for this Map. [`IAMap.create`](#IAMap__create).
+* **`store`** _(`Object`)_: A backing store for this Map. See [`IAMap.create`](#IAMap__create).
 * **`id`**: An content address / ID understood by the backing `store`.
 
 <a name="IAMap__registerHasher"></a>
@@ -324,7 +328,7 @@ the same identifier.
 Root node form:
 ```
 {
-  codec: Buffer
+  codec: string
   bitWidth: number
   bucketSize: number
   dataMap: number
@@ -377,6 +381,67 @@ scan of nodes and therefore incurs a load and deserialisation cost for each chil
 A `false` result from this method suggests a flaw in the implemetation.
 
 **Return value**  _(`Promise.<boolean>`)_: A Promise with a boolean value indicating whether this IAMap is correctly formatted.
+
+<a name="IAMap_fromChildSerializable"></a>
+### `IAMap#fromChildSerializable(store, id, serializable[, depth])`
+
+A convenience shortcut to [`IAMap.fromSerializable`](#IAMap__fromSerializable) that uses this IAMap node instance's backing `store` and
+configuration `options`. Intended to be used to instantiate child IAMap nodes from a root IAMap node.
+
+**Parameters:**
+
+* **`store`** _(`Object`)_: A backing store for this Map. See [`IAMap.create`](#IAMap__create).
+* **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
+* **`serializable`** _(`Object`)_: The serializable form of an IAMap node to be instantiated.
+* **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
+
+<a name="IAMap__isRootSerializable"></a>
+### `IAMap.isRootSerializable(serializable)`
+
+Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
+an IAMap before trying to instantiate it.
+
+**Parameters:**
+
+* **`serializable`** _(`Object`)_: An object that may be a serialisable form of an IAMap root node
+
+**Return value**  _(`boolean`)_: An indication that the serialisable form is or is not an IAMap root node
+
+<a name="IAMap__isSerializable"></a>
+### `IAMap.isSerializable(serializable)`
+
+Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
+an IAMap node before trying to instantiate it.
+This should pass for both root nodes as well as child nodes
+
+**Parameters:**
+
+* **`serializable`** _(`Object`)_: An object that may be a serialisable form of an IAMap node
+
+**Return value**  _(`boolean`)_: An indication that the serialisable form is or is not an IAMap node
+
+<a name="IAMap__fromSerializable"></a>
+### `IAMap.fromSerializable(store, id, serializable[, options][, depth])`
+
+Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
+produced by [`IAMap#toSerializable`](#IAMap_toSerializable).
+Serialised forms of root nodes must satisfy both [`IAMap.isRootSerializable`](#IAMap__isRootSerializable) and [`IAMap.isSerializable`](#IAMap__isSerializable). For
+root nodes, the `options` parameter will be ignored and the `depth` parameter must be the default value of `0`.
+Serialised forms of non-root nodes must satisfy [`IAMap.isSerializable`](#IAMap__isSerializable) and have a valid `options` parameter and
+a non-`0` `depth` parameter.
+
+**Parameters:**
+
+* **`store`** _(`Object`)_: A backing store for this Map. See [`IAMap.create`](#IAMap__create).
+* **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. Unlike [`IAMap.create`](#IAMap__create),
+  `fromSerializable()` does not `save()` a newly created IAMap node so an ID is not generated for it. If one is
+  required for downstream purposes it should be provided, if the value is `null` or `undefined`, `node.id` will
+  be `null` but will remain writable.
+* **`serializable`** _(`Object`)_: The serializable form of an IAMap node to be instantiated
+* **`options`** _(`Object`, optional, default=`null`)_: An options object for IAMap child node instantiation. Will be ignored for root
+  node instantiation (where `depth` = `0`) See [`IAMap.create`](#IAMap__create).
+* **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. Where `0` is the root node and any `>0` number is a child
+  node.
 
 ## License and Copyright
 

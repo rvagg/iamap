@@ -13,7 +13,7 @@ test('empty object', async (t) => {
   const store = memoryStore()
   const map = await IAMap.create(store, { codec: 'murmur3-32' })
   const emptySerialized = {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
@@ -32,7 +32,7 @@ test('empty object', async (t) => {
 test('empty custom', async (t) => {
   const store = memoryStore()
   const emptySerialized = {
-    codec: Buffer.from([ 0 ]), // identity
+    codec: 'identity', // identity
     bitWidth: 8,
     bucketSize: 3,
     dataMap: 0,
@@ -62,7 +62,7 @@ test('child custom', async (t) => {
   const id = await store.save(emptySerialized)
 
   const map = await IAMap.load(store, id, 10, {
-    codec: Buffer.from([ 0 ]),
+    codec: 'identity',
     bitWidth: 7,
     bucketSize: 30
   })
@@ -81,7 +81,7 @@ test('child custom', async (t) => {
 test('malformed', async (t) => {
   const store = memoryStore()
   let emptySerialized = {
-    codec: Buffer.from([ 10 ]), // not registered
+    codec: 'sha2-256', // not registered
     bitWidth: 8,
     bucketSize: 3,
     dataMap: 0,
@@ -92,7 +92,7 @@ test('malformed', async (t) => {
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.codec = Buffer.from([ 0 ]) // identity
+  emptySerialized.codec = 'identity' // identity
   emptySerialized.bitWidth = 'foo'
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
@@ -153,7 +153,7 @@ test('malformed', async (t) => {
   }
   id = await store.save(emptySerialized)
   t.resolves(IAMap.load(store, id, 32, {
-    codec: Buffer.from([ 0 ]),
+    codec: 'identity',
     bitWidth: 7,
     bucketSize: 30
   })) // this is OK for bitWidth of 8 and hash bytes of 32
@@ -161,12 +161,64 @@ test('malformed', async (t) => {
   emptySerialized = Object.assign({}, emptySerialized) // clone
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
-    codec: Buffer.from([ 0 ]),
+    codec: 'identity',
     bitWidth: 8,
     bucketSize: 30
   }))
 
+  t.throws(() => {
+    IAMap.fromSerializable(store, undefined, emptySerialized, {
+      codec: 'identity',
+      bitWidth: 5,
+      bucketSize: 2
+    }, 'foobar')
+  })
+
   t.throws(() => new Constructor(store, { codec: 'identity' }, 0, 0, 0, [ { nope: 'nope' } ]))
+})
+
+test('fromChildSerializable', async (t) => {
+  const store = memoryStore()
+
+  let emptySerializedRoot = {
+    codec: 'identity',
+    bitWidth: 8,
+    bucketSize: 3,
+    dataMap: 0,
+    nodeMap: 0,
+    elements: []
+  }
+  let emptySerializedChild = {
+    dataMap: 0b110011,
+    nodeMap: 0b101010,
+    elements: []
+  }
+
+  t.strictEqual(IAMap.isRootSerializable(emptySerializedRoot), true)
+  t.strictEqual(IAMap.isSerializable(emptySerializedRoot), true)
+  t.strictEqual(IAMap.isSerializable(emptySerializedChild), true)
+
+  let root = await IAMap.fromSerializable(store, 'somerootid', emptySerializedRoot)
+
+  t.strictDeepEqual(root.toSerializable(), emptySerializedRoot)
+  t.strictEqual(root.id, 'somerootid')
+
+  let child = await root.fromChildSerializable('somechildid', emptySerializedChild, 10)
+
+  t.strictDeepEqual(child.toSerializable(), emptySerializedChild)
+  t.strictEqual(child.id, 'somechildid')
+  t.strictEqual(child.config.codec, 'identity')
+  t.strictEqual(child.config.bitWidth, 8)
+  t.strictEqual(child.config.bucketSize, 3)
+  t.strictEqual(child.dataMap, 0b110011)
+  t.strictEqual(child.nodeMap, 0b101010)
+  t.ok(Array.isArray(child.elements))
+  t.strictEqual(child.elements.length, 0)
+
+  child = await root.fromChildSerializable(undefined, emptySerializedChild, 10)
+
+  t.strictDeepEqual(child.toSerializable(), emptySerializedChild)
+  t.strictEqual(child.id, null)
 })
 
 test('bad loads', async (t) => {
@@ -191,19 +243,19 @@ test('bad loads', async (t) => {
   })) // bad codec
 
   t.rejects(IAMap.load(store, id, 32, {
-    codec: Buffer.from([ 0 ]),
+    codec: 'identity',
     bitWidth: 'foo',
     bucketSize: 30
   })) // bad bitWidth
 
   t.rejects(IAMap.load(store, id, 32, {
-    codec: Buffer.from([ 0 ]),
+    codec: 'identity',
     bitWidth: 8,
     bucketSize: true
   })) // bad bucketSize
 
   t.rejects(IAMap.load(store, id, 'foo', {
-    codec: Buffer.from([ 0 ]),
+    codec: 'identity',
     bitWidth: 8,
     bucketSize: 8
   })) // bad bucketSize

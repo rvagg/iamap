@@ -60,7 +60,7 @@ async function create (store, options, dataMap, nodeMap, depth, elements) {
  * @name IAMap.load
  * @function
  * @async
- * @param {Object} store - A backing store for this Map. {@link IAMap.create}.
+ * @param {Object} store - A backing store for this Map. See {@link IAMap.create}.
  * @param id - An content address / ID understood by the backing `store`.
  */
 async function load (store, id, depth = 0, options) {
@@ -69,7 +69,7 @@ async function load (store, id, depth = 0, options) {
     throw new Error('Cannot load() without options at depth > 0')
   }
   let serialized = await store.load(id)
-  return IAMap.fromSerializable(store, id, depth, options, serialized)
+  return fromSerializable(store, id, serialized, options, depth)
 }
 
 /**
@@ -235,8 +235,8 @@ class IAMap {
     }
     ro(this, 'nodeMap', nodeMap || 0)
 
-    if (depth !== undefined && typeof depth !== 'number') {
-      throw new TypeError('`depth` must be a Number')
+    if (depth !== undefined && (!Number.isInteger(depth) || depth < 0)) {
+      throw new TypeError('`depth` must be an integer >= 0')
     }
     ro(this, 'depth', depth || 0)
     if (this.depth > Math.floor((hashBytes * 8) / this.config.bitWidth)) {
@@ -534,7 +534,7 @@ class IAMap {
    * Root node form:
    * ```
    * {
-   *   codec: Buffer
+   *   codec: string
    *   bitWidth: number
    *   bucketSize: number
    *   dataMap: number
@@ -568,7 +568,7 @@ class IAMap {
       nodeMap: this.nodeMap
     }
     if (this.depth === 0) {
-      r.codec = multicodec.codes[this.config.codec]
+      r.codec = this.config.codec
       r.bitWidth = this.config.bitWidth
       r.bucketSize = this.config.bucketSize
     }
@@ -628,6 +628,19 @@ class IAMap {
     let inv5 = nodeArity >= 0 && entryArity >= 0 && ((entryArity + nodeArity) === arity)
 
     return inv1 && inv2 && inv3 && inv4 && inv5
+  }
+
+  /**
+   * A convenience shortcut to {@link IAMap.fromSerializable} that uses this IAMap node instance's backing `store` and
+   * configuration `options`. Intended to be used to instantiate child IAMap nodes from a root IAMap node.
+   *
+   * @param {Object} store A backing store for this Map. See {@link IAMap.create}.
+   * @param {Object} id An optional ID for the instantiated IAMap node. See {@link IAMap.fromSerializable}.
+   * @param {Object} serializable The serializable form of an IAMap node to be instantiated.
+   * @param {number} [depth=0] The depth of the IAMap node. See {@link IAMap.fromSerializable}.
+  */
+  fromChildSerializable (id, serializable, depth) {
+    return fromSerializable(this.store, id, serializable, this.config, depth)
   }
 }
 
@@ -794,25 +807,76 @@ async function collapseNodeInline (node, bitpos, newNode) {
   return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newElements)
 }
 
-// MUST be symmetrical with IAMap#toSerializable()
-IAMap.fromSerializable = function (store, id, depth, options, obj) {
-  if (depth === 0) { // even if options were supplied, ignore them and use what's in the obj
-    if (!Buffer.isBuffer(obj.codec) || typeof obj.bitWidth !== 'number' || typeof obj.bucketSize !== 'number') {
+/**
+ * Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
+ * an IAMap before trying to instantiate it.
+ *
+ * @name IAMap.isRootSerializable
+ * @function
+ * @param {Object} serializable An object that may be a serialisable form of an IAMap root node
+ * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
+ */
+function isRootSerializable (serializable) {
+  return typeof serializable.codec === 'string' &&
+    typeof serializable.bitWidth === 'number' &&
+    typeof serializable.bucketSize === 'number'
+}
+
+/**
+ * Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
+ * an IAMap node before trying to instantiate it.
+ * This should pass for both root nodes as well as child nodes
+ *
+ * @name IAMap.isSerializable
+ * @function
+ * @param {Object} serializable An object that may be a serialisable form of an IAMap node
+ * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
+ */
+function isSerializable (serializable) {
+  return Array.isArray(serializable.elements) &&
+    typeof serializable.dataMap === 'number' &&
+    typeof serializable.nodeMap === 'number'
+}
+
+/**
+ * Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
+ * produced by {@link IAMap#toSerializable}.
+ * Serialised forms of root nodes must satisfy both {@link IAMap.isRootSerializable} and {@link IAMap.isSerializable}. For
+ * root nodes, the `options` parameter will be ignored and the `depth` parameter must be the default value of `0`.
+ * Serialised forms of non-root nodes must satisfy {@link IAMap.isSerializable} and have a valid `options` parameter and
+ * a non-`0` `depth` parameter.
+ *
+ * @name IAMap.fromSerializable
+ * @function
+ * @param {Object} store A backing store for this Map. See {@link IAMap.create}.
+ * @param {Object} id An optional ID for the instantiated IAMap node. Unlike {@link IAMap.create},
+ * `fromSerializable()` does not `save()` a newly created IAMap node so an ID is not generated for it. If one is
+ * required for downstream purposes it should be provided, if the value is `null` or `undefined`, `node.id` will
+ * be `null` but will remain writable.
+ * @param {Object} serializable The serializable form of an IAMap node to be instantiated
+ * @param {Object} [options=null] An options object for IAMap child node instantiation. Will be ignored for root
+ * node instantiation (where `depth` = `0`) See {@link IAMap.create}.
+ * @param {number} [depth=0] The depth of the IAMap node. Where `0` is the root node and any `>0` number is a child
+ * node.
+ */
+function fromSerializable (store, id, serializable, options = null, depth = 0) {
+  if (depth === 0) { // even if options were supplied, ignore them and use what's in the serializable
+    if (!isRootSerializable(serializable)) {
       throw new Error('Object does not appear to be an IAMap root (depth==0)')
     }
+    // don't use passed-in options
     options = {
-      codec: multicodec.names[obj.codec.toString('hex')],
-      bitWidth: obj.bitWidth,
-      bucketSize: obj.bucketSize
+      codec: serializable.codec,
+      bitWidth: serializable.bitWidth,
+      bucketSize: serializable.bucketSize
     }
   }
-  if (Buffer.isBuffer(options.codec)) {
-    options.codec = multicodec.names[options.codec.toString('hex')]
+  assert(Array.isArray(serializable.elements))
+  let elements = serializable.elements.map(Element.fromSerializable)
+  let node = new IAMap(store, options, serializable.dataMap, serializable.nodeMap, depth, elements)
+  if (id != null) {
+    ro(node, 'id', id)
   }
-  assert(Array.isArray(obj.elements))
-  let elements = obj.elements.map(Element.fromSerializable)
-  let node = new IAMap(store, options, obj.dataMap, obj.nodeMap, depth, elements)
-  ro(node, 'id', id)
   return node
 }
 
@@ -832,4 +896,6 @@ function hasher (map) {
 module.exports.create = create
 module.exports.load = load
 module.exports.registerHasher = registerHasher
-module.exports.fromSerializable = IAMap.fromSerializable
+module.exports.fromSerializable = fromSerializable
+module.exports.isSerializable = isSerializable
+module.exports.isRootSerializable = isRootSerializable

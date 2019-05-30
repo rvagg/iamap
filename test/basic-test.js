@@ -11,7 +11,7 @@ test('empty object', async (t) => {
   const store = memoryStore()
   const map = await IAMap.create(store, { codec: 'murmur3-32' })
   t.strictDeepEqual(map.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
@@ -39,7 +39,7 @@ test('test basic set/get', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
@@ -47,7 +47,7 @@ test('test basic set/get', async (t) => {
     elements: []
   })
   t.strictDeepEqual(newMap.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: newMap.dataMap,
@@ -77,7 +77,7 @@ test('test basic set/set-same/get', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
@@ -85,7 +85,7 @@ test('test basic set/set-same/get', async (t) => {
     elements: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: newMap1.dataMap,
@@ -118,7 +118,7 @@ test('test basic set/update/get', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
@@ -126,7 +126,7 @@ test('test basic set/update/get', async (t) => {
     elements: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: newMap1.dataMap,
@@ -135,7 +135,7 @@ test('test basic set/update/get', async (t) => {
   })
   t.ok(newMap1.dataMap !== 0)
   t.strictDeepEqual(newMap2.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: newMap1.dataMap,
@@ -168,7 +168,7 @@ test('test basic set/get/delete', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
@@ -176,7 +176,7 @@ test('test basic set/get/delete', async (t) => {
     elements: []
   })
   t.strictDeepEqual(setMap.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: setMap.dataMap,

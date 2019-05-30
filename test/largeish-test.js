@@ -16,7 +16,7 @@ test(`fill with ${PEAK} and empty`, async (t) => {
   let map = await IAMap.create(store, { codec: 'murmur3-32' })
 
   t.strictDeepEqual(map.toSerializable(), {
-    codec: Buffer.from([ 0x23 ]),
+    codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     dataMap: 0,
