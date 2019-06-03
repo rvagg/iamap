@@ -187,43 +187,9 @@ class IAMap {
     ro(this, 'store', store)
 
     this.id = null
-    let config = {}
-    ro(this, 'config', config)
+    ro(this, 'config', buildConfig(options))
 
-    if (!options) {
-      throw new TypeError('Invalid `options` object')
-    }
-
-    if (typeof options.codec !== 'string') {
-      throw new TypeError('Invalid `codec` option')
-    }
-    if (!hasherRegistry[options.codec]) {
-      throw new TypeError(`Unknown codec: '${options.codec}'`)
-    }
-    ro(config, 'codec', options.codec)
     let hashBytes = hasherRegistry[options.codec].hashBytes
-
-    if (typeof options.bitWidth === 'number') {
-      if (options.bitWidth <= 1 || options.bitWidth > 8) {
-        throw new TypeError('Invalid `bitWidth` option')
-      }
-      ro(config, 'bitWidth', options.bitWidth)
-    } else if (options.bitWidth !== undefined) {
-      throw new TypeError('Invalid `bitWidth` option')
-    } else {
-      ro(config, 'bitWidth', defaultBitWidth)
-    }
-
-    if (typeof options.bucketSize === 'number') {
-      if (options.bucketSize < 2) {
-        throw new TypeError('Invalid `bucketSize` option')
-      }
-      ro(config, 'bucketSize', options.bucketSize)
-    } else if (options.bucketSize !== undefined) {
-      throw new TypeError('Invalid `bucketSize` option')
-    } else {
-      ro(config, 'bucketSize', defaultBucketSize)
-    }
 
     if (dataMap !== undefined && typeof dataMap !== 'number') {
       throw new TypeError('`dataMap` must be a Number')
@@ -313,26 +279,13 @@ class IAMap {
    * @async
    */
   async get (key) {
-    if (!Buffer.isBuffer(key)) {
-      key = Buffer.from(key)
+    const traversal = traverse(this.config, this, this.depth, key, this.store.isEqual)
+    if (traversal.nextId !== null) {
+      let child = await load(this.store, traversal.nextId, this.depth + 1, this.config)
+      assert(child)
+      return child.get(key)
     }
-    const hash = hasher(this)(key)
-    assert(Buffer.isBuffer(hash))
-    const bitpos = mask(hash, this.depth, this.config.bitWidth)
-
-    if (bitmapHas(this.dataMap, bitpos)) { // should be in a bucket in this node
-      return findDataElement(this, bitpos, key, async (found, elementAt, element, bucketIndex, bucketEntry) => {
-        return found ? bucketEntry.value : null
-      })
-    } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
-      return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link, this.depth + 1, this.config)
-        assert(child)
-        return child.get(key)
-      })
-    } else { // we don't have an element for this hash portion
-      return null
-    }
+    return traversal.value
   }
 
   /**
@@ -652,7 +605,7 @@ async function save (store, newNode) {
 }
 
 // utility function to avoid duplication since it's used across get(), set() and delete()
-async function findDataElement (node, bitpos, key, onFound) {
+function findDataElement (node, bitpos, key, onFound) {
   let elementAt = index(node.dataMap, bitpos)
   let element = node.elements[elementAt]
   assert(element)
@@ -674,7 +627,7 @@ function nodeIndex (nodeMap, elements, bitpos) {
 }
 
 // very simple utility function to avoid duplication
-async function findNodeElement (node, bitpos, onFound) {
+function findNodeElement (node, bitpos, onFound) {
   let elementAt = nodeIndex(node.nodeMap, node.elements, bitpos)
   let element = node.elements[elementAt]
   assert(element)
@@ -807,6 +760,98 @@ async function collapseNodeInline (node, bitpos, newNode) {
   return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newElements)
 }
 
+function buildConfig (options) {
+  let config = {}
+
+  if (!options) {
+    throw new TypeError('Invalid `options` object')
+  }
+
+  if (typeof options.codec !== 'string') {
+    throw new TypeError('Invalid `codec` option')
+  }
+  if (!hasherRegistry[options.codec]) {
+    throw new TypeError(`Unknown codec: '${options.codec}'`)
+  }
+  ro(config, 'codec', options.codec)
+
+  if (typeof options.bitWidth === 'number') {
+    if (options.bitWidth <= 1 || options.bitWidth > 8) {
+      throw new TypeError('Invalid `bitWidth` option')
+    }
+    ro(config, 'bitWidth', options.bitWidth)
+  } else if (options.bitWidth !== undefined) {
+    throw new TypeError('Invalid `bitWidth` option')
+  } else {
+    ro(config, 'bitWidth', defaultBitWidth)
+  }
+
+  if (typeof options.bucketSize === 'number') {
+    if (options.bucketSize < 2) {
+      throw new TypeError('Invalid `bucketSize` option')
+    }
+    ro(config, 'bucketSize', options.bucketSize)
+  } else if (options.bucketSize !== undefined) {
+    throw new TypeError('Invalid `bucketSize` option')
+  } else {
+    ro(config, 'bucketSize', defaultBucketSize)
+  }
+
+  return config
+}
+
+/* istanbul ignore next */
+const dummyStore = { load () {}, save () {} }
+
+/**
+ * Perform a single-block synchronous traversal. Takes a root block, and a second block (either the
+ * root block or a child block), the depth of the second block in relation to the root, the key
+ * being looked up and an `isEqual()` for comparing identifiers. Performs the single-node traversal
+ * algorithm and halts if the value being looked up is contained within that block or if a child
+ * block is required to traverse further. It is up to the user to perform additional traversals on
+ * child blocks when they are available.
+ *
+ * @name IAMap.traverse
+ * @function
+ * @param {Object} rootBlock The root block, for extracting the IAMap configuration data
+ * @param {Object} currentBlock The block currently being traversed. This may either be the root block
+ * itself (for the start of a traversal) or any child block within the IAMap structure.
+ * @param {number} depth The distance from the root block, since child blocks don't contain their
+ * depth information and we lose it when not performing a full recursive traversal.
+ * @param {string|array|Buffer|ArrayBuffer} key - A key to remove. See {@link IAMap#set} for details about
+ * acceptable `key` types.
+ * @param {function} isEqual A function that compares two identifiers in the data store. See
+ * {@link IAMap.create} for details on the backing store and the requirements of an `isEqual()` function.
+ * @returns {Object} The returned object is of the form `{ value, nextId }` where one of these properties
+ * may be non-null. If the `nextId` is non-null, a further traversal is required on a child block
+ * identified by `nextId` with a depth 1 greater than the current depth. Where `nextId` is `null`,
+ * `value` will either be `null` or a value found within the current block.
+ */
+function traverse (rootBlock, currentBlock, depth, key, isEqual) {
+  if (!Buffer.isBuffer(key)) {
+    key = Buffer.from(key)
+  }
+  const store = Object.assign(dummyStore, { isEqual })
+  const node = IAMap.isIAMap(currentBlock)
+    ? currentBlock
+    : fromSerializable(store, 0, currentBlock, rootBlock, depth)
+  const hash = hasherRegistry[node.config.codec].hasher(key)
+  assert(Buffer.isBuffer(hash))
+  const bitpos = mask(hash, depth, node.config.bitWidth)
+
+  if (bitmapHas(node.dataMap, bitpos)) { // should be in a bucket in this node
+    return findDataElement(node, bitpos, key, (found, elementAt, element, bucketIndex, bucketEntry) => {
+      return { value: found ? bucketEntry.value : null, nextId: null }
+    })
+  } else if (bitmapHas(node.nodeMap, bitpos)) { // should be in a child node
+    return findNodeElement(node, bitpos, (elementAt, element) => {
+      return { value: null, nextId: element.link }
+    })
+  } else { // we don't have an element for this hash portion
+    return { value: null, nextId: null }
+  }
+}
+
 /**
  * Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
  * an IAMap before trying to instantiate it.
@@ -896,6 +941,7 @@ function hasher (map) {
 module.exports.create = create
 module.exports.load = load
 module.exports.registerHasher = registerHasher
+module.exports.traverse = traverse
 module.exports.fromSerializable = fromSerializable
 module.exports.isSerializable = isSerializable
 module.exports.isRootSerializable = isRootSerializable

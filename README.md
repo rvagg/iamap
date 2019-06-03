@@ -122,6 +122,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`IAMap#directNodeCount()`](#IAMap_directNodeCount)
  * [`async IAMap#isInvariant()`](#IAMap_isInvariant)
  * [`IAMap#fromChildSerializable(store, id, serializable[, depth])`](#IAMap_fromChildSerializable)
+ * [`IAMap.traverse(rootBlock, currentBlock, depth, key, isEqual)`](#IAMap__traverse)
  * [`IAMap.isRootSerializable(serializable)`](#IAMap__isRootSerializable)
  * [`IAMap.isSerializable(serializable)`](#IAMap__isSerializable)
  * [`IAMap.fromSerializable(store, id, serializable[, options][, depth])`](#IAMap__fromSerializable)
@@ -394,6 +395,33 @@ configuration `options`. Intended to be used to instantiate child IAMap nodes fr
 * **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
 * **`serializable`** _(`Object`)_: The serializable form of an IAMap node to be instantiated.
 * **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
+
+<a name="IAMap__traverse"></a>
+### `IAMap.traverse(rootBlock, currentBlock, depth, key, isEqual)`
+
+Perform a single-block synchronous traversal. Takes a root block, and a second block (either the
+root block or a child block), the depth of the second block in relation to the root, the key
+being looked up and an `isEqual()` for comparing identifiers. Performs the single-node traversal
+algorithm and halts if the value being looked up is contained within that block or if a child
+block is required to traverse further. It is up to the user to perform additional traversals on
+child blocks when they are available.
+
+**Parameters:**
+
+* **`rootBlock`** _(`Object`)_: The root block, for extracting the IAMap configuration data
+* **`currentBlock`** _(`Object`)_: The block currently being traversed. This may either be the root block
+  itself (for the start of a traversal) or any child block within the IAMap structure.
+* **`depth`** _(`number`)_: The distance from the root block, since child blocks don't contain their
+  depth information and we lose it when not performing a full recursive traversal.
+* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
+  acceptable `key` types.
+* **`isEqual`** _(`function`)_: A function that compares two identifiers in the data store. See
+  [`IAMap.create`](#IAMap__create) for details on the backing store and the requirements of an `isEqual()` function.
+
+**Return value**  _(`Object`)_: The returned object is of the form `{ value, nextId }` where one of these properties
+  may be non-null. If the `nextId` is non-null, a further traversal is required on a child block
+  identified by `nextId` with a depth 1 greater than the current depth. Where `nextId` is `null`,
+  `value` will either be `null` or a value found within the current block.
 
 <a name="IAMap__isRootSerializable"></a>
 ### `IAMap.isRootSerializable(serializable)`

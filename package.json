@@ -5,6 +5,7 @@
   "main": "iamap.js",
   "scripts": {
     "test": "tap test/*-test.js --cov --100",
+    "coverage": "tap test/*-test.js --cov --coverage-report=html",
     "docs": "jsdoc4readme --readme iamap.js"
   },
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
@@ -13,7 +14,7 @@
     "multicodec": "~0.5.0"
   },
   "devDependencies": {
-    "jsdoc4readme": "~1.1.1",
+    "jsdoc4readme": "~1.1.2",
     "murmurhash3js-revisited": "~3.0.0",
     "tap": "~12.6.1"
   },
