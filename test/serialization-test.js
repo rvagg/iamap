@@ -11,9 +11,9 @@ let Constructor
 
 test('empty object', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { codec: 'murmur3-32' })
+  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
   const emptySerialized = {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,
@@ -31,7 +31,7 @@ test('empty object', async (t) => {
 test('empty custom', async (t) => {
   const store = memoryStore()
   const emptySerialized = {
-    codec: 'identity', // identity
+    hashAlg: 'identity', // identity
     bitWidth: 8,
     bucketSize: 3,
     map: 0,
@@ -41,7 +41,7 @@ test('empty custom', async (t) => {
 
   const map = await IAMap.load(store, id)
   t.strictDeepEqual(map.toSerializable(), emptySerialized)
-  t.strictEqual(map.config.codec, 'identity')
+  t.strictEqual(map.config.hashAlg, 'identity')
   t.strictEqual(map.config.bitWidth, 8)
   t.strictEqual(map.config.bucketSize, 3)
   t.strictEqual(map.map, 0)
@@ -58,14 +58,14 @@ test('child custom', async (t) => {
   const id = await store.save(emptySerialized)
 
   const map = await IAMap.load(store, id, 10, {
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 7,
     bucketSize: 30
   })
 
   t.strictDeepEqual(map.toSerializable(), emptySerialized)
   t.strictEqual(map.depth, 10)
-  t.strictEqual(map.config.codec, 'identity')
+  t.strictEqual(map.config.hashAlg, 'identity')
   t.strictEqual(map.config.bitWidth, 7)
   t.strictEqual(map.config.bucketSize, 30)
   t.strictEqual(map.map, 0b110011)
@@ -76,7 +76,7 @@ test('child custom', async (t) => {
 test('malformed', async (t) => {
   const store = memoryStore()
   let emptySerialized = {
-    codec: 'sha2-256', // not registered
+    hashAlg: 'sha2-256', // not registered
     bitWidth: 8,
     bucketSize: 3,
     map: 0,
@@ -86,7 +86,7 @@ test('malformed', async (t) => {
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.codec = 'identity' // identity
+  emptySerialized.hashAlg = 'identity' // identity
   emptySerialized.bitWidth = 'foo'
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
@@ -140,7 +140,7 @@ test('malformed', async (t) => {
   }
   id = await store.save(emptySerialized)
   t.resolves(IAMap.load(store, id, 32, {
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 7,
     bucketSize: 30
   })) // this is OK for bitWidth of 8 and hash bytes of 32
@@ -148,27 +148,27 @@ test('malformed', async (t) => {
   emptySerialized = Object.assign({}, emptySerialized) // clone
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: 30
   }))
 
   t.throws(() => {
     IAMap.fromSerializable(store, undefined, emptySerialized, {
-      codec: 'identity',
+      hashAlg: 'identity',
       bitWidth: 5,
       bucketSize: 2
     }, 'foobar')
   })
 
-  t.throws(() => new Constructor(store, { codec: 'identity' }, 0, 0, [ { nope: 'nope' } ]))
+  t.throws(() => new Constructor(store, { hashAlg: 'identity' }, 0, 0, [ { nope: 'nope' } ]))
 })
 
 test('fromChildSerializable', async (t) => {
   const store = memoryStore()
 
   let emptySerializedRoot = {
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: 3,
     map: 0,
@@ -192,7 +192,7 @@ test('fromChildSerializable', async (t) => {
 
   t.strictDeepEqual(child.toSerializable(), emptySerializedChild)
   t.strictEqual(child.id, 'somechildid')
-  t.strictEqual(child.config.codec, 'identity')
+  t.strictEqual(child.config.hashAlg, 'identity')
   t.strictEqual(child.config.bitWidth, 8)
   t.strictEqual(child.config.bucketSize, 3)
   t.strictEqual(child.map, 0b110011)
@@ -217,28 +217,28 @@ test('bad loads', async (t) => {
   t.rejects(IAMap.load(store, id, 32, {
     bitWidth: 8,
     bucketSize: 30
-  })) // no codec
+  })) // no hashAlg
 
   t.rejects(IAMap.load(store, id, 32, {
-    codec: { yoiks: true },
+    hashAlg: { yoiks: true },
     bitWidth: 8,
     bucketSize: 30
-  })) // bad codec
+  })) // bad hashAlg
 
   t.rejects(IAMap.load(store, id, 32, {
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 'foo',
     bucketSize: 30
   })) // bad bitWidth
 
   t.rejects(IAMap.load(store, id, 32, {
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: true
   })) // bad bucketSize
 
   t.rejects(IAMap.load(store, id, 'foo', {
-    codec: 'identity',
+    hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: 8
   })) // bad bucketSize

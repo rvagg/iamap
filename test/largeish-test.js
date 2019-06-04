@@ -13,10 +13,10 @@ let loadId
 let keys = []
 
 test(`fill with ${PEAK} and empty`, async (t) => {
-  let map = await IAMap.create(store, { codec: 'murmur3-32' })
+  let map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
 
   t.strictDeepEqual(map.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,

@@ -2,7 +2,7 @@
 
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
-// Needs additional dependencies: npm i level ipld-dag-cbor multihashing cids split2
+// Needs additional dependencies: npm i level ipld-dag-cbor multihashing multicodec cids split2
 // Run with `node --no-warnings` to suppress any experimental warnings
 
 /*
@@ -42,7 +42,6 @@ storing IAMap's within an IAMap and using the root as a Map and the values are S
 */
 
 const assert = require('assert')
-const { promisify } = require('util')
 const fs = require('fs')
 const path = require('path')
 const { Transform } = require('stream')
@@ -50,14 +49,15 @@ const murmurhash3 = require('murmurhash3js-revisited')
 const level = require('level')
 const dagCbor = require('ipld-dag-cbor')
 const multihashing = require('multihashing')
+const multicodec = require('multicodec')
 const CID = require('cids')
 const split2 = require('split2')
 const IAMap = require('../')
 
 const dbLocation = '/tmp/iamap-level-example.db'
 
-const serialize = promisify(dagCbor.util.serialize)
-const deserialize = promisify(dagCbor.util.deserialize)
+const serialize = dagCbor.util.serialize
+const deserialize = dagCbor.util.deserialize
 
 const store = {
   stats: {
@@ -69,8 +69,8 @@ const store = {
   backingDb: level(dbLocation, { keyEncoding: 'ascii', valueEncoding: 'binary' }),
   encode: async (obj) => {
     let block = await serialize(obj)
-    let multihash = multihashing(block, dagCbor.resolver.defaultHashAlg)
-    let cid = new CID(1, dagCbor.resolver.multicodec, multihash)
+    let multihash = multihashing(block, dagCbor.util.defaultHashAlg)
+    let cid = new CID(1, multicodec.print[multicodec.DAG_CBOR], multihash)
     return { cid, block }
   },
   decode: async (block) => {
@@ -159,7 +159,7 @@ async function createMap (id) {
     return IAMap.load(store, id)
   }
   // new map with default options, our hasher and custom store
-  return IAMap.create(store, { codec: 'murmur3-32' })
+  return IAMap.create(store, { hashAlg: 'murmur3-32' })
 }
 
 // --index <dir>
