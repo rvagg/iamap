@@ -9,9 +9,9 @@ IAMap.registerHasher('identity', 32, identityHasher) // not recommended
 
 test('empty object', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { codec: 'murmur3-32' })
+  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
   t.strictDeepEqual(map.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,
@@ -27,7 +27,7 @@ test('empty object', async (t) => {
 
 test('test basic set/get', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { codec: 'murmur3-32' })
+  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
   const newMap = await map.set('foo', 'bar')
 
   t.strictEqual(await newMap.get('foo'), 'bar')
@@ -38,14 +38,14 @@ test('test basic set/get', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,
     data: []
   })
   t.strictDeepEqual(newMap.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: newMap.map,
@@ -64,7 +64,7 @@ test('test basic set/get', async (t) => {
 
 test('test basic set/set-same/get', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { codec: 'murmur3-32' })
+  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
   const newMap1 = await map.set('foo', 'bar')
   const newMap2 = await newMap1.set('foo', 'bar')
 
@@ -74,14 +74,14 @@ test('test basic set/set-same/get', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,
     data: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: newMap1.map,
@@ -102,7 +102,7 @@ test('test basic set/set-same/get', async (t) => {
 
 test('test basic set/update/get', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { codec: 'murmur3-32' })
+  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
   const newMap1 = await map.set('foo', 'bar')
   const newMap2 = await newMap1.set('foo', 'baz')
 
@@ -113,14 +113,14 @@ test('test basic set/update/get', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,
     data: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: newMap1.map,
@@ -128,7 +128,7 @@ test('test basic set/update/get', async (t) => {
   })
   t.ok(newMap1.map !== 0)
   t.strictDeepEqual(newMap2.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: newMap1.map,
@@ -149,7 +149,7 @@ test('test basic set/update/get', async (t) => {
 
 test('test basic set/get/delete', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { codec: 'murmur3-32' })
+  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
   const setMap = await map.set('foo', 'bar')
   const deleteMap = await setMap.delete('foo')
 
@@ -160,14 +160,14 @@ test('test basic set/get/delete', async (t) => {
 
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: 0,
     data: []
   })
   t.strictDeepEqual(setMap.toSerializable(), {
-    codec: 'murmur3-32',
+    hashAlg: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
     map: setMap.map,
@@ -190,7 +190,7 @@ test('test basic set/get/delete', async (t) => {
 
 test('test predictable single level fill', async (t) => {
   const store = memoryStore()
-  let map = await IAMap.create(store, { codec: 'identity', bitWidth: 4, bucketSize: 3 })
+  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 3 })
   // bitWidth of 4 yields 16 buckets, we can use 'identity' hash to feed keys that we know
   // will go into certain slots
   for (let i = 0; i < 16; i++) {
@@ -236,7 +236,7 @@ test('test predictable single level fill', async (t) => {
 
 test('test predictable fill vertical and collapse', async (t) => {
   const store = memoryStore()
-  const options = { codec: 'identity', bitWidth: 4, bucketSize: 2 }
+  const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }
   let map = await IAMap.create(store, options)
 
   let k = (2 << 4) | 2
@@ -347,7 +347,7 @@ test('test predictable fill vertical and collapse', async (t) => {
 
 test('test predictable fill vertical, switched delete', async (t) => {
   const store = memoryStore()
-  const options = { codec: 'identity', bitWidth: 4, bucketSize: 2 }
+  const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }
   let map = await IAMap.create(store, options)
   let k = (2 << 4) | 2
   // 3 entries at the lowest node, one part way back up, like last test
@@ -388,7 +388,7 @@ test('test predictable fill vertical, switched delete', async (t) => {
 
 test('test predictable fill vertical, larger buckets', async (t) => {
   const store = memoryStore()
-  const options = { codec: 'identity', bitWidth: 4, bucketSize: 4 }
+  const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 4 }
   let map = await IAMap.create(store, options)
   let k = (6 << 4) | 6 // let's try index 6 now
 
@@ -447,7 +447,7 @@ test('test predictable fill vertical, larger buckets', async (t) => {
 test('test keys, values, entries', async (t) => {
   const store = memoryStore()
   // use the identity hash from the predictable fill test(s) to spread things out a bit
-  let map = await IAMap.create(store, { codec: 'identity', bitWidth: 4, bucketSize: 2 })
+  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
   let ids = []
   map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
@@ -499,7 +499,7 @@ test('test non-store, sync block-by-block traversal', async (t) => {
   const store = memoryStore()
   function isEqual (cid1, cid2) { return cid1.equals(cid2) }
   // use the identity hash from the predictable fill test(s) to spread things out a bit
-  let map = await IAMap.create(store, { codec: 'identity', bitWidth: 4, bucketSize: 2 })
+  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
   map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
   t.strictEqual(await map.size(), 1)

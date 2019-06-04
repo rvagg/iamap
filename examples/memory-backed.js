@@ -61,7 +61,7 @@ IAMap.registerHasher('murmur3-32', 32, murmurHasher)
 
 async function memoryBacked () {
   const store = memoryStore() // new store
-  let map = await IAMap.create(store, { codec: 'murmur3-32' }) // new map with default options, our hasher and custom store
+  let map = await IAMap.create(store, { hashAlg: 'murmur3-32' }) // new map with default options, our hasher and custom store
 
   for await (let pkg of findPackages(path.join(__dirname, '..'))) {
     // Store a string key and a JavaScript object as a value, this will work for our store but if we needed to store it
