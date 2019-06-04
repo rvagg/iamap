@@ -21,7 +21,7 @@ test(`fill with ${PEAK} and empty`, async (t) => {
     bucketSize: 8,
     dataMap: 0,
     nodeMap: 0,
-    elements: []
+    data: []
   })
   t.strictEqual(store.map.size, 1)
   t.strictEqual(store.saves, 1)

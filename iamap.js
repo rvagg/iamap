@@ -33,20 +33,20 @@ const hasherRegistry = {}
  * @param {Object} options - Options for this IAMap
  * @param {string} options.codec - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
  * hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with {@link IAMap.registerHasher}.
- * @param {number} [options.bitWidth=5] - The number of bits to extract from the hash to form an element index at
- * each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the element index, since 2^5=32,
- * each node will store up to 32 elements (child nodes and/or entry buckets). The maximum depth of the Map is
+ * @param {number} [options.bitWidth=5] - The number of bits to extract from the hash to form a data element index at
+ * each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
+ * each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
  * determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
  * produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
- * currently allowed is `8` which will store 256 elements in each node.
+ * currently allowed is `8` which will store 256 data elements in each node.
  * @param {number} [options.bucketSize=8] - The maximum number of collisions acceptable at each level of the Map. A
  * collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
  * bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
  * pushed
  */
-async function create (store, options, dataMap, nodeMap, depth, elements) {
-  // dataMap, nodeMap, depth and elements are intended for internal use
-  let newNode = new IAMap(store, options, dataMap, nodeMap, depth, elements)
+async function create (store, options, dataMap, nodeMap, depth, data) {
+  // dataMap, nodeMap, depth and data are intended for internal use
+  let newNode = new IAMap(store, options, dataMap, nodeMap, depth, data)
   return save(store, newNode)
 }
 
@@ -86,7 +86,7 @@ async function load (store, id, depth = 0, options) {
  * function identifier, e.g. `'murmur3-32'`.
  * @param {number} hasherBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
  * @param {function} hasher - A hash function that takes a `Buffer` derived from the `key` values used for this
- * Map and returns a `Buffer` (or a `Buffer`-like, such that each element of the array contains a single byte value).
+ * Map and returns a `Buffer` (or a `Buffer`-like, such that each data element of the array contains a single byte value).
  */
 function registerHasher (codec, hashBytes, hasher) {
   if (!multicodec.codes[codec]) {
@@ -119,9 +119,8 @@ KV.fromSerializable = function (obj) {
   return new KV(obj[0], obj[1])
 }
 
-// an element in the array of elements that each node holds, each
-// element could be either a container of an array (bucket) of KVs
-// or a link to a child node
+// a element in the data array that each node holds, each element could be either a container of
+// an array (bucket) of KVs or a link to a child node
 class Element {
   constructor (bucket, link) {
     this.bucket = bucket || null
@@ -147,7 +146,7 @@ Element.fromSerializable = function (obj) {
   } else if (obj && obj.link && Object.keys(obj).length === 1) {
     return new Element(null, obj.link)
   } else {
-    assert.fail('badly formed element')
+    assert.fail('badly formed data element')
   }
 }
 
@@ -169,7 +168,7 @@ Element.fromSerializable = function (obj) {
  * @property {number} [nodeMap=0] - Bitmap indicating which slots are occupied by child nodes
  * @property {number} [depth=0] - Depth of the current node in the IAMap, `depth` is used to extract bits from the
  * key hashes to locate slots
- * @property {Array} [elements=[]] - Array of elements (an internal `Element` type), each of which contains a
+ * @property {Array} [data=[]] - Array of data elements (an internal `Element` type), each of which contains a
  * bucket of entries or an ID of a child node
  * See {@link IAMap.create} for more details.
  */
@@ -178,7 +177,7 @@ class IAMap {
    * @ignore
    * @private
    */
-  constructor (store, options, dataMap, nodeMap, depth, elements) {
+  constructor (store, options, dataMap, nodeMap, depth, data) {
     if (!store || typeof store.save !== 'function' ||
         typeof store.load !== 'function' ||
         typeof store.isEqual !== 'function') {
@@ -211,10 +210,10 @@ class IAMap {
       throw new Error('Overflow: maximum tree depth reached')
     }
 
-    ro(this, 'elements', Object.freeze(elements || []))
-    for (let e of this.elements) {
+    ro(this, 'data', Object.freeze(data || []))
+    for (let e of this.data) {
       if (!(e instanceof Element)) {
-        throw new TypeError('`elements` array must contain only `Element` types')
+        throw new TypeError('`data` array must contain only `Element` types')
       }
     }
   }
@@ -330,14 +329,14 @@ class IAMap {
           } else {
             // we'll either have more entries left than this.config.bucketSize or we're at the root node
             // so this is a simple bucket removal, no collapsing needed (root nodes can't be collapsed)
-            let lastInBucket = this.elements.length === 1
+            let lastInBucket = this.data.length === 1
             // we have at least one child node or too many entries in buckets to be collapsed
-            let newElements = removeFromBucket(this.elements, bitpos, elementAt, lastInBucket, bucketIndex)
+            let newData = removeFromBucket(this.data, bitpos, elementAt, lastInBucket, bucketIndex)
             let newDataMap = this.dataMap
             if (lastInBucket) {
               newDataMap = setBit(newDataMap, bitpos, 0)
             }
-            return create(this.store, this.config, newDataMap, this.nodeMap, this.depth, newElements)
+            return create(this.store, this.config, newDataMap, this.nodeMap, this.depth, newData)
           }
         } else {
           // key would be located here according to hash, but we don't have it
@@ -353,7 +352,7 @@ class IAMap {
           return this
         }
 
-        assert(newChild.elements.length > 0) // something probably went wrong in the dataMap block above
+        assert(newChild.data.length > 0) // something probably went wrong in the dataMap block above
 
         if (newChild.directNodeCount() === 0 && newChild.directEntryCount() === this.config.bucketSize) {
           // child got collapsed
@@ -384,7 +383,7 @@ class IAMap {
    */
   async size () {
     let c = 0
-    for (let e of this.elements) {
+    for (let e of this.data) {
       if (e.bucket) {
         c += e.bucket.length
       } else {
@@ -404,7 +403,7 @@ class IAMap {
    * @async
    */
   async * keys () {
-    for (let e of this.elements) {
+    for (let e of this.data) {
       if (e.bucket) {
         for (let kv of e.bucket) {
           yield kv.key
@@ -424,7 +423,7 @@ class IAMap {
    * @async
    */
   async * values () {
-    for (let e of this.elements) {
+    for (let e of this.data) {
       if (e.bucket) {
         for (let kv of e.bucket) {
           yield kv.value
@@ -444,7 +443,7 @@ class IAMap {
    * @async
    */
   async * entries () {
-    for (let e of this.elements) {
+    for (let e of this.data) {
       if (e.bucket) {
         for (let kv of e.bucket) {
           yield { key: kv.key, value: kv.value }
@@ -464,7 +463,7 @@ class IAMap {
    */
   async * ids () {
     yield this.id
-    for (let e of this.elements) {
+    for (let e of this.data) {
       if (e.link) {
         let child = await load(this.store, e.link, this.depth + 1, this.config)
         yield * child.ids()
@@ -474,7 +473,7 @@ class IAMap {
 
   /**
    * Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
-   * JavaScript `Object` including a representation of its elements array that the key/value pairs it contains as well as
+   * JavaScript `Object` including a representation of its data array that the key/value pairs it contains as well as
    * the identifiers of child nodes.
    * Root nodes (depth==0) contain the full map configuration information, while intermediate and leaf nodes contain only
    * data that cannot be inferred by traversal from a root node that already has this data (codec, bitWidth and bucketSize).
@@ -492,7 +491,7 @@ class IAMap {
    *   bucketSize: number
    *   dataMap: number
    *   nodeMap: number
-   *   elements: Array
+   *   data: Array
    * }
    * ```
    *
@@ -501,11 +500,11 @@ class IAMap {
    * {
    *   dataMap: number
    *   nodeMap: number
-   *   elements: Array
+   *   data: Array
    * }
    * ```
    *
-   * Where `elements` is an array of a mix of either buckets or links:
+   * Where `data` is an array of a mix of either buckets or links:
    *
    * * A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
    *   or whatever type has been provided in `set()` operations for this `IAMap`.
@@ -525,7 +524,7 @@ class IAMap {
       r.bitWidth = this.config.bitWidth
       r.bucketSize = this.config.bucketSize
     }
-    r.elements = this.elements.map((e) => {
+    r.data = this.data.map((e) => {
       return e.toSerializable()
     })
     return r
@@ -538,7 +537,7 @@ class IAMap {
    * @returns {number} A number representing the number of local entries.
    */
   directEntryCount () {
-    return this.elements.reduce((p, c) => {
+    return this.data.reduce((p, c) => {
       return p + (c.bucket ? c.bucket.length : 0)
     }, 0)
   }
@@ -550,7 +549,7 @@ class IAMap {
    * @returns {number} A number representing the number of direct child nodes
    */
   directNodeCount () {
-    return this.elements.reduce((p, c) => {
+    return this.data.reduce((p, c) => {
       return p + (c.link ? 1 : 0)
     }, 0)
   }
@@ -607,7 +606,7 @@ async function save (store, newNode) {
 // utility function to avoid duplication since it's used across get(), set() and delete()
 function findDataElement (node, bitpos, key, onFound) {
   let elementAt = index(node.dataMap, bitpos)
-  let element = node.elements[elementAt]
+  let element = node.data[elementAt]
   assert(element)
   assert(element.bucket)
   for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
@@ -622,14 +621,14 @@ function findDataElement (node, bitpos, key, onFound) {
 // child node indexes are more complicated than bucket indexes, in our elements array
 // buckets are at the start in order, so index(this.dataMap, bitpos) works fine for them
 // nodes go at the end in CHAMP, so we need index from the end (i.e. in reverse)
-function nodeIndex (nodeMap, elements, bitpos) {
-  return elements.length - 1 - index(nodeMap, bitpos)
+function nodeIndex (nodeMap, data, bitpos) {
+  return data.length - 1 - index(nodeMap, bitpos)
 }
 
 // very simple utility function to avoid duplication
 function findNodeElement (node, bitpos, onFound) {
-  let elementAt = nodeIndex(node.nodeMap, node.elements, bitpos)
-  let element = node.elements[elementAt]
+  let elementAt = nodeIndex(node.nodeMap, node.data, bitpos)
+  let element = node.data[elementAt]
   assert(element)
   assert(element.link)
   return onFound(elementAt, element)
@@ -638,15 +637,15 @@ function findNodeElement (node, bitpos, onFound) {
 // new element for this node, i.e. first time this hash portion has been seen here
 async function addNewElement (node, bitpos, key, value) {
   let insertAt = index(node.dataMap, bitpos)
-  let newElements = node.elements.slice()
-  newElements.splice(insertAt, 0, new Element([ new KV(key, value) ]))
+  let newData = node.data.slice()
+  newData.splice(insertAt, 0, new Element([ new KV(key, value) ]))
   let newDataMap = setBit(node.dataMap, bitpos, 1)
-  return create(node.store, node.config, newDataMap, node.nodeMap, node.depth, newElements)
+  return create(node.store, node.config, newDataMap, node.nodeMap, node.depth, newData)
 }
 
 // update an existing bucket with a new k/v pair
 async function updateBucket (node, elementAt, bucketAt, key, value) {
-  let oldElement = node.elements[elementAt]
+  let oldElement = node.data[elementAt]
   let newElement = new Element(oldElement.bucket.slice())
   let newKv = new KV(key, value)
   if (bucketAt === -1) {
@@ -656,15 +655,15 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   } else {
     newElement.bucket[bucketAt] = newKv
   }
-  let newElements = node.elements.slice()
-  newElements[elementAt] = newElement
-  return create(node.store, node.config, node.dataMap, node.nodeMap, node.depth, newElements)
+  let newData = node.data.slice()
+  newData[elementAt] = newElement
+  return create(node.store, node.config, node.dataMap, node.nodeMap, node.depth, newData)
 }
 
 // overflow of a bucket means it has to be replaced with a child node, tricky surgery
 async function replaceBucketWithNode (node, bitpos, elementAt) {
   let newNode = new IAMap(node.store, node.config, 0, 0, node.depth + 1)
-  let element = node.elements[elementAt]
+  let element = node.data[elementAt]
   assert(element)
   assert(element.bucket)
   for (let c of element.bucket) {
@@ -672,8 +671,8 @@ async function replaceBucketWithNode (node, bitpos, elementAt) {
   }
   newNode = await save(node.store, newNode)
 
-  let newElements = node.elements.slice()
-  newElements.splice(elementAt, 1) // delete
+  let newData = node.data.slice()
+  newData.splice(elementAt, 1) // delete
   let newDataMap = setBit(node.dataMap, bitpos, 0)
   assert(!bitmapHas(newDataMap, bitpos))
 
@@ -681,19 +680,19 @@ async function replaceBucketWithNode (node, bitpos, elementAt) {
   let newNodeMap = setBit(node.nodeMap, bitpos, 1)
   assert(bitmapHas(newNodeMap, bitpos))
   // see nodeIndex() for why we index from the right
-  let insertAt = newElements.length - index(newNodeMap, bitpos)
-  newElements.splice(insertAt, 0, new Element(null, newNode.id))
+  let insertAt = newData.length - index(newNodeMap, bitpos)
+  newData.splice(insertAt, 0, new Element(null, newNode.id))
 
-  return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newElements)
+  return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newData)
 }
 
 // similar to addNewElement() but for new child nodes
 async function updateNode (node, elementAt, key, newChild) {
   assert(newChild.id)
   let newElement = new Element(null, newChild.id)
-  let newElements = node.elements.slice()
-  newElements[elementAt] = newElement
-  return create(node.store, node.config, node.dataMap, node.nodeMap, node.depth, newElements)
+  let newData = node.data.slice()
+  newData[elementAt] = newElement
+  return create(node.store, node.config, node.dataMap, node.nodeMap, node.depth, newData)
 }
 
 // take a node, extract all of its local entries and put them into a new node with a single
@@ -701,7 +700,7 @@ async function updateNode (node, elementAt, key, newChild) {
 function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
   let newDataMap = setBit(0, mask(hash, 0, node.config.bitWidth), 1)
-  let newBucket = node.elements.reduce((p, c, i) => {
+  let newBucket = node.data.reduce((p, c, i) => {
     if (i === elementAt) {
       if (c.bucket.length === 1) { // only element in bucket, skip it
         return p
@@ -721,19 +720,19 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
 }
 
 // simple delete from an existing bucket in this node
-function removeFromBucket (elements, bitpos, elementAt, lastInBucket, bucketIndex) {
-  let newElements = elements.slice()
+function removeFromBucket (data, bitpos, elementAt, lastInBucket, bucketIndex) {
+  let newData = data.slice()
   if (!lastInBucket) {
     // bucket will not be empty, remove only the element from it
-    let oldElement = elements[elementAt]
+    let oldElement = data[elementAt]
     let newElement = new Element(oldElement.bucket.slice())
     newElement.bucket.splice(bucketIndex, 1)
-    newElements.splice(elementAt, 1, newElement) // replace old bucket
+    newData.splice(elementAt, 1, newElement) // replace old bucket
   } else {
     // empty bucket, just remove it
-    newElements.splice(elementAt, 1)
+    newData.splice(elementAt, 1)
   }
-  return newElements
+  return newData
 }
 
 // a node has bubbled up from a recursive delete() and we need to extract its
@@ -741,23 +740,23 @@ function removeFromBucket (elements, bitpos, elementAt, lastInBucket, bucketInde
 async function collapseNodeInline (node, bitpos, newNode) {
   // assume the newNode has a single bucket and it's sorted and ready to replace the place
   // it had in node's element array
-  assert.strictEqual(newNode.elements.length, 1)
-  assert(newNode.elements[0].bucket)
-  let newBucket = newNode.elements[0].bucket.slice()
+  assert.strictEqual(newNode.data.length, 1)
+  assert(newNode.data[0].bucket)
+  let newBucket = newNode.data[0].bucket.slice()
   let newElement = new Element(newBucket)
 
-  let oldIndex = nodeIndex(node.nodeMap, node.elements, bitpos)
+  let oldIndex = nodeIndex(node.nodeMap, node.data, bitpos)
   let newIndex = index(node.dataMap, bitpos)
   assert(oldIndex >= newIndex)
-  let newElements = node.elements.slice()
-  newElements.splice(oldIndex, 1) // remove old node
-  newElements.splice(newIndex, 0, newElement)
+  let newData = node.data.slice()
+  newData.splice(oldIndex, 1) // remove old node
+  newData.splice(newIndex, 0, newElement)
 
   let newDataMap = node.dataMap
   newDataMap = setBit(newDataMap, bitpos, 1)
   let newNodeMap = node.nodeMap
   newNodeMap = setBit(newNodeMap, bitpos, 0)
-  return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newElements)
+  return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newData)
 }
 
 function buildConfig (options) {
@@ -878,7 +877,7 @@ function isRootSerializable (serializable) {
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
 function isSerializable (serializable) {
-  return Array.isArray(serializable.elements) &&
+  return Array.isArray(serializable.data) &&
     typeof serializable.dataMap === 'number' &&
     typeof serializable.nodeMap === 'number'
 }
@@ -916,9 +915,9 @@ function fromSerializable (store, id, serializable, options = null, depth = 0) {
       bucketSize: serializable.bucketSize
     }
   }
-  assert(Array.isArray(serializable.elements))
-  let elements = serializable.elements.map(Element.fromSerializable)
-  let node = new IAMap(store, options, serializable.dataMap, serializable.nodeMap, depth, elements)
+  assert(Array.isArray(serializable.data))
+  let data = serializable.data.map(Element.fromSerializable)
+  let node = new IAMap(store, options, serializable.dataMap, serializable.nodeMap, depth, data)
   if (id != null) {
     ro(node, 'id', id)
   }

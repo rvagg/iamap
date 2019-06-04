@@ -18,7 +18,7 @@ test('empty object', async (t) => {
     bucketSize: 8,
     dataMap: 0,
     nodeMap: 0,
-    elements: []
+    data: []
   }
 
   t.strictDeepEqual(map.toSerializable(), emptySerialized)
@@ -37,7 +37,7 @@ test('empty custom', async (t) => {
     bucketSize: 3,
     dataMap: 0,
     nodeMap: 0,
-    elements: []
+    data: []
   }
   const id = await store.save(emptySerialized)
 
@@ -48,8 +48,8 @@ test('empty custom', async (t) => {
   t.strictEqual(map.config.bucketSize, 3)
   t.strictEqual(map.dataMap, 0)
   t.strictEqual(map.nodeMap, 0)
-  t.ok(Array.isArray(map.elements))
-  t.strictEqual(map.elements.length, 0)
+  t.ok(Array.isArray(map.data))
+  t.strictEqual(map.data.length, 0)
 })
 
 test('child custom', async (t) => {
@@ -57,7 +57,7 @@ test('child custom', async (t) => {
   const emptySerialized = {
     dataMap: 0b110011,
     nodeMap: 0b101010,
-    elements: []
+    data: []
   }
   const id = await store.save(emptySerialized)
 
@@ -74,8 +74,8 @@ test('child custom', async (t) => {
   t.strictEqual(map.config.bucketSize, 30)
   t.strictEqual(map.dataMap, 0b110011)
   t.strictEqual(map.nodeMap, 0b101010)
-  t.ok(Array.isArray(map.elements))
-  t.strictEqual(map.elements.length, 0)
+  t.ok(Array.isArray(map.data))
+  t.strictEqual(map.data.length, 0)
 })
 
 test('malformed', async (t) => {
@@ -86,7 +86,7 @@ test('malformed', async (t) => {
     bucketSize: 3,
     dataMap: 0,
     nodeMap: 0,
-    elements: []
+    data: []
   }
   let id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
@@ -115,12 +115,12 @@ test('malformed', async (t) => {
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.bucketSize = 3
-  emptySerialized.elements = { nope: 'nope' }
+  emptySerialized.data = { nope: 'nope' }
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.elements = []
+  emptySerialized.data = []
   emptySerialized.nodeMap = 'foo'
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
@@ -137,19 +137,19 @@ test('malformed', async (t) => {
   t.rejects(IAMap.load(store, id, 'foo'))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.elements = [ { woot: 'nope' } ]
+  emptySerialized.data = [ { woot: 'nope' } ]
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.elements = [ [ { nope: 'nope' } ] ]
+  emptySerialized.data = [ [ { nope: 'nope' } ] ]
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = {
     dataMap: 0b110011,
     nodeMap: 0b101010,
-    elements: []
+    data: []
   }
   id = await store.save(emptySerialized)
   t.resolves(IAMap.load(store, id, 32, {
@@ -186,12 +186,12 @@ test('fromChildSerializable', async (t) => {
     bucketSize: 3,
     dataMap: 0,
     nodeMap: 0,
-    elements: []
+    data: []
   }
   let emptySerializedChild = {
     dataMap: 0b110011,
     nodeMap: 0b101010,
-    elements: []
+    data: []
   }
 
   t.strictEqual(IAMap.isRootSerializable(emptySerializedRoot), true)
@@ -212,8 +212,8 @@ test('fromChildSerializable', async (t) => {
   t.strictEqual(child.config.bucketSize, 3)
   t.strictEqual(child.dataMap, 0b110011)
   t.strictEqual(child.nodeMap, 0b101010)
-  t.ok(Array.isArray(child.elements))
-  t.strictEqual(child.elements.length, 0)
+  t.ok(Array.isArray(child.data))
+  t.strictEqual(child.data.length, 0)
 
   child = await root.fromChildSerializable(undefined, emptySerializedChild, 10)
 
@@ -227,7 +227,7 @@ test('bad loads', async (t) => {
   let emptySerialized = {
     dataMap: 0b110011,
     nodeMap: 0b101010,
-    elements: []
+    data: []
   }
   let id = await store.save(emptySerialized)
 
