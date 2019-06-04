@@ -11,12 +11,7 @@
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
   "license": "Apache-2.0",
   "dependencies": {
-    "cids": "~0.7.1",
-    "ipld-dag-cbor": "~0.15.0",
-    "level": "~5.0.1",
-    "multicodec": "~0.5.3",
-    "multihashing": "~0.3.3",
-    "split2": "~3.1.1"
+    "multicodec": "~0.5.3"
   },
   "devDependencies": {
     "jsdoc4readme": "~1.1.2",
