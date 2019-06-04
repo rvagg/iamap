@@ -16,8 +16,7 @@ test('empty object', async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   }
 
@@ -35,8 +34,7 @@ test('empty custom', async (t) => {
     codec: 'identity', // identity
     bitWidth: 8,
     bucketSize: 3,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   }
   const id = await store.save(emptySerialized)
@@ -46,8 +44,7 @@ test('empty custom', async (t) => {
   t.strictEqual(map.config.codec, 'identity')
   t.strictEqual(map.config.bitWidth, 8)
   t.strictEqual(map.config.bucketSize, 3)
-  t.strictEqual(map.dataMap, 0)
-  t.strictEqual(map.nodeMap, 0)
+  t.strictEqual(map.map, 0)
   t.ok(Array.isArray(map.data))
   t.strictEqual(map.data.length, 0)
 })
@@ -55,8 +52,7 @@ test('empty custom', async (t) => {
 test('child custom', async (t) => {
   const store = memoryStore()
   const emptySerialized = {
-    dataMap: 0b110011,
-    nodeMap: 0b101010,
+    map: 0b110011,
     data: []
   }
   const id = await store.save(emptySerialized)
@@ -72,8 +68,7 @@ test('child custom', async (t) => {
   t.strictEqual(map.config.codec, 'identity')
   t.strictEqual(map.config.bitWidth, 7)
   t.strictEqual(map.config.bucketSize, 30)
-  t.strictEqual(map.dataMap, 0b110011)
-  t.strictEqual(map.nodeMap, 0b101010)
+  t.strictEqual(map.map, 0b110011)
   t.ok(Array.isArray(map.data))
   t.strictEqual(map.data.length, 0)
 })
@@ -84,8 +79,7 @@ test('malformed', async (t) => {
     codec: 'sha2-256', // not registered
     bitWidth: 8,
     bucketSize: 3,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   }
   let id = await store.save(emptySerialized)
@@ -121,18 +115,12 @@ test('malformed', async (t) => {
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.data = []
-  emptySerialized.nodeMap = 'foo'
+  emptySerialized.map = 'foo'
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.nodeMap = 0
-  emptySerialized.dataMap = 'foo'
-  id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
-
-  emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.dataMap = 0
+  emptySerialized.map = 0
   id = await store.save(emptySerialized)
   t.rejects(IAMap.load(store, id, 'foo'))
 
@@ -147,8 +135,7 @@ test('malformed', async (t) => {
   t.rejects(IAMap.load(store, id))
 
   emptySerialized = {
-    dataMap: 0b110011,
-    nodeMap: 0b101010,
+    map: 0b110011,
     data: []
   }
   id = await store.save(emptySerialized)
@@ -174,7 +161,7 @@ test('malformed', async (t) => {
     }, 'foobar')
   })
 
-  t.throws(() => new Constructor(store, { codec: 'identity' }, 0, 0, 0, [ { nope: 'nope' } ]))
+  t.throws(() => new Constructor(store, { codec: 'identity' }, 0, 0, [ { nope: 'nope' } ]))
 })
 
 test('fromChildSerializable', async (t) => {
@@ -184,13 +171,11 @@ test('fromChildSerializable', async (t) => {
     codec: 'identity',
     bitWidth: 8,
     bucketSize: 3,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   }
   let emptySerializedChild = {
-    dataMap: 0b110011,
-    nodeMap: 0b101010,
+    map: 0b110011,
     data: []
   }
 
@@ -210,8 +195,7 @@ test('fromChildSerializable', async (t) => {
   t.strictEqual(child.config.codec, 'identity')
   t.strictEqual(child.config.bitWidth, 8)
   t.strictEqual(child.config.bucketSize, 3)
-  t.strictEqual(child.dataMap, 0b110011)
-  t.strictEqual(child.nodeMap, 0b101010)
+  t.strictEqual(child.map, 0b110011)
   t.ok(Array.isArray(child.data))
   t.strictEqual(child.data.length, 0)
 
@@ -225,8 +209,7 @@ test('bad loads', async (t) => {
   const store = memoryStore()
 
   let emptySerialized = {
-    dataMap: 0b110011,
-    nodeMap: 0b101010,
+    map: 0b110011,
     data: []
   }
   let id = await store.save(emptySerialized)

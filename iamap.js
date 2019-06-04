@@ -44,9 +44,9 @@ const hasherRegistry = {}
  * bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
  * pushed
  */
-async function create (store, options, dataMap, nodeMap, depth, data) {
-  // dataMap, nodeMap, depth and data are intended for internal use
-  let newNode = new IAMap(store, options, dataMap, nodeMap, depth, data)
+async function create (store, options, map, depth, data) {
+  // map, depth and data are intended for internal use
+  let newNode = new IAMap(store, options, map, depth, data)
   return save(store, newNode)
 }
 
@@ -163,9 +163,8 @@ Element.fromSerializable = function (obj) {
  * @property {number} config.bitWidth - The number of bits used at each level of this `IAMap`. See {@link IAMap.create}
  * for more details.
  * @property {number} config.bucketSize - TThe maximum number of collisions acceptable at each level of the Map.
- * @property {number} [dataMap=0] - Bitmap indicating which slots are occupied by data entries, each data entry
- * contains an bucket of entries
- * @property {number} [nodeMap=0] - Bitmap indicating which slots are occupied by child nodes
+ * @property {number} [map=0] - Bitmap indicating which slots are occupied by data entries or child node links,
+ * each data entry contains an bucket of entries.
  * @property {number} [depth=0] - Depth of the current node in the IAMap, `depth` is used to extract bits from the
  * key hashes to locate slots
  * @property {Array} [data=[]] - Array of data elements (an internal `Element` type), each of which contains a
@@ -177,7 +176,7 @@ class IAMap {
    * @ignore
    * @private
    */
-  constructor (store, options, dataMap, nodeMap, depth, data) {
+  constructor (store, options, map, depth, data) {
     if (!store || typeof store.save !== 'function' ||
         typeof store.load !== 'function' ||
         typeof store.isEqual !== 'function') {
@@ -190,15 +189,10 @@ class IAMap {
 
     let hashBytes = hasherRegistry[options.codec].hashBytes
 
-    if (dataMap !== undefined && typeof dataMap !== 'number') {
-      throw new TypeError('`dataMap` must be a Number')
+    if (map !== undefined && typeof map !== 'number') {
+      throw new TypeError('`map` must be a Number')
     }
-    ro(this, 'dataMap', dataMap || 0)
-
-    if (nodeMap !== undefined && typeof nodeMap !== 'number') {
-      throw new TypeError('`nodeMap` must be a Number')
-    }
-    ro(this, 'nodeMap', nodeMap || 0)
+    ro(this, 'map', map || 0)
 
     if (depth !== undefined && (!Number.isInteger(depth) || depth < 0)) {
       throw new TypeError('`depth` must be an integer >= 0')
@@ -237,32 +231,31 @@ class IAMap {
     assert(Buffer.isBuffer(hash))
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
-    if (bitmapHas(this.dataMap, bitpos)) { // should be in a bucket in this node
-      return findDataElement(this, bitpos, key, async (found, elementAt, element, bucketIndex, bucketEntry) => {
-        if (found) {
-          if (bucketEntry.value === value) {
+    if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
+      let { data, link } = findElement(this, bitpos, key)
+      if (data) {
+        if (data.found) {
+          if (data.bucketEntry.value === value) {
             return this // no change, identical value
           }
           // replace entry for this key with a new value
           // note that === will fail for two complex objects representing the same data so we may end up
           // with a node of the same ID anyway
-          return updateBucket(this, elementAt, bucketIndex, key, value)
+          return updateBucket(this, data.elementAt, data.bucketIndex, key, value)
         } else {
-          if (element.bucket.length >= this.config.bucketSize) {
+          if (data.element.bucket.length >= this.config.bucketSize) {
             // too many collisions at this level, replace a bucket with a child node
-            return (await replaceBucketWithNode(this, bitpos, elementAt)).set(key, value)
+            return (await replaceBucketWithNode(this, bitpos, data.elementAt)).set(key, value)
           }
           // insert into the bucket and sort it
-          return updateBucket(this, elementAt, -1, key, value)
+          return updateBucket(this, data.elementAt, -1, key, value)
         }
-      })
-    } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
-      return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link, this.depth + 1, this.config)
+      } else { // link
+        let child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(child)
         let newChild = await child.set(key, value)
-        return updateNode(this, elementAt, key, newChild)
-      })
+        return updateNode(this, link.elementAt, key, newChild)
+      }
     } else { // we don't have an element for this hash portion, make one
       return addNewElement(this, bitpos, key, value)
     }
@@ -318,41 +311,40 @@ class IAMap {
     assert(Buffer.isBuffer(hash))
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
-    if (bitmapHas(this.dataMap, bitpos)) { // should be in a bucket in this node
-      return findDataElement(this, bitpos, key, async (found, elementAt, element, bucketIndex, bucketEntry) => {
-        if (found) {
+    if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
+      let { data, link } = findElement(this, bitpos, key)
+      if (data) {
+        if (data.found) {
           if (this.depth !== 0 && this.directNodeCount() === 0 && this.directEntryCount() === this.config.bucketSize + 1) {
             // current node will only have this.config.bucketSize entries spread across its buckets
             // and no child nodes, so wrap up the remaining nodes in a fresh IAMap at depth 0, it will
             // bubble up to either become the new root node or be unpacked by a higher level
-            return collapseIntoSingleBucket(this, hash, elementAt, bucketIndex)
+            return collapseIntoSingleBucket(this, hash, data.elementAt, data.bucketIndex)
           } else {
             // we'll either have more entries left than this.config.bucketSize or we're at the root node
             // so this is a simple bucket removal, no collapsing needed (root nodes can't be collapsed)
             let lastInBucket = this.data.length === 1
             // we have at least one child node or too many entries in buckets to be collapsed
-            let newData = removeFromBucket(this.data, bitpos, elementAt, lastInBucket, bucketIndex)
-            let newDataMap = this.dataMap
+            let newData = removeFromBucket(this.data, bitpos, data.elementAt, lastInBucket, data.bucketIndex)
+            let newMap = this.map
             if (lastInBucket) {
-              newDataMap = setBit(newDataMap, bitpos, 0)
+              newMap = setBit(newMap, bitpos, 0)
             }
-            return create(this.store, this.config, newDataMap, this.nodeMap, this.depth, newData)
+            return create(this.store, this.config, newMap, this.depth, newData)
           }
         } else {
           // key would be located here according to hash, but we don't have it
           return this
         }
-      })
-    } else if (bitmapHas(this.nodeMap, bitpos)) { // should be in a child node
-      return findNodeElement(this, bitpos, async (elementAt, element) => {
-        let child = await load(this.store, element.link, this.depth + 1, this.config)
+      } else { // link
+        let child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(child)
         let newChild = await child.delete(key)
-        if (this.store.isEqual(newChild.id, element.link)) { // no modification
+        if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
           return this
         }
 
-        assert(newChild.data.length > 0) // something probably went wrong in the dataMap block above
+        assert(newChild.data.length > 0) // something probably went wrong in the map block above
 
         if (newChild.directNodeCount() === 0 && newChild.directEntryCount() === this.config.bucketSize) {
           // child got collapsed
@@ -367,9 +359,9 @@ class IAMap {
           }
         } else {
           // simple node replacement with edited child
-          return updateNode(this, elementAt, key, newChild)
+          return updateNode(this, link.elementAt, key, newChild)
         }
-      })
+      }
     } else { // we don't have an element for this hash portion
       return this
     }
@@ -489,8 +481,7 @@ class IAMap {
    *   codec: string
    *   bitWidth: number
    *   bucketSize: number
-   *   dataMap: number
-   *   nodeMap: number
+   *   map: number
    *   data: Array
    * }
    * ```
@@ -498,8 +489,7 @@ class IAMap {
    * Intermediate and leaf node form:
    * ```
    * {
-   *   dataMap: number
-   *   nodeMap: number
+   *   map: number
    *   data: Array
    * }
    * ```
@@ -515,10 +505,7 @@ class IAMap {
    * if any.
    */
   toSerializable () {
-    let r = {
-      dataMap: this.dataMap,
-      nodeMap: this.nodeMap
-    }
+    let r = { map: this.map }
     if (this.depth === 0) {
       r.codec = this.config.codec
       r.bitWidth = this.config.bitWidth
@@ -604,43 +591,35 @@ async function save (store, newNode) {
 }
 
 // utility function to avoid duplication since it's used across get(), set() and delete()
-function findDataElement (node, bitpos, key, onFound) {
-  let elementAt = index(node.dataMap, bitpos)
+/*
+{ bucket: { found: true, elementAt, element, bucketIndex, bucketEntry } }
+{ bucket: { found: false, elementAt, element } }
+{ link: { elementAt, element } }
+*/
+function findElement (node, bitpos, key) {
+  let elementAt = index(node.map, bitpos)
   let element = node.data[elementAt]
   assert(element)
-  assert(element.bucket)
-  for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
-    let bucketEntry = element.bucket[bucketIndex]
-    if (bucketEntry.key.equals(key)) {
-      return onFound(true, elementAt, element, bucketIndex, bucketEntry)
+  if (element.bucket) { // data element
+    for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
+      let bucketEntry = element.bucket[bucketIndex]
+      if (bucketEntry.key.equals(key)) {
+        return { data: { found: true, elementAt, element, bucketIndex, bucketEntry } }
+      }
     }
+    return { data: { found: false, elementAt, element } }
   }
-  return onFound(false, elementAt, element)
-}
-
-// child node indexes are more complicated than bucket indexes, in our elements array
-// buckets are at the start in order, so index(this.dataMap, bitpos) works fine for them
-// nodes go at the end in CHAMP, so we need index from the end (i.e. in reverse)
-function nodeIndex (nodeMap, data, bitpos) {
-  return data.length - 1 - index(nodeMap, bitpos)
-}
-
-// very simple utility function to avoid duplication
-function findNodeElement (node, bitpos, onFound) {
-  let elementAt = nodeIndex(node.nodeMap, node.data, bitpos)
-  let element = node.data[elementAt]
-  assert(element)
   assert(element.link)
-  return onFound(elementAt, element)
+  return { link: { elementAt, element } }
 }
 
 // new element for this node, i.e. first time this hash portion has been seen here
 async function addNewElement (node, bitpos, key, value) {
-  let insertAt = index(node.dataMap, bitpos)
+  let insertAt = index(node.map, bitpos)
   let newData = node.data.slice()
   newData.splice(insertAt, 0, new Element([ new KV(key, value) ]))
-  let newDataMap = setBit(node.dataMap, bitpos, 1)
-  return create(node.store, node.config, newDataMap, node.nodeMap, node.depth, newData)
+  let newMap = setBit(node.map, bitpos, 1)
+  return create(node.store, node.config, newMap, node.depth, newData)
 }
 
 // update an existing bucket with a new k/v pair
@@ -657,12 +636,12 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   }
   let newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, node.config, node.dataMap, node.nodeMap, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData)
 }
 
 // overflow of a bucket means it has to be replaced with a child node, tricky surgery
 async function replaceBucketWithNode (node, bitpos, elementAt) {
-  let newNode = new IAMap(node.store, node.config, 0, 0, node.depth + 1)
+  let newNode = new IAMap(node.store, node.config, 0, node.depth + 1)
   let element = node.data[elementAt]
   assert(element)
   assert(element.bucket)
@@ -670,20 +649,9 @@ async function replaceBucketWithNode (node, bitpos, elementAt) {
     newNode = await newNode.set(c.key, c.value)
   }
   newNode = await save(node.store, newNode)
-
   let newData = node.data.slice()
-  newData.splice(elementAt, 1) // delete
-  let newDataMap = setBit(node.dataMap, bitpos, 0)
-  assert(!bitmapHas(newDataMap, bitpos))
-
-  assert(!bitmapHas(node.nodeMap, bitpos))
-  let newNodeMap = setBit(node.nodeMap, bitpos, 1)
-  assert(bitmapHas(newNodeMap, bitpos))
-  // see nodeIndex() for why we index from the right
-  let insertAt = newData.length - index(newNodeMap, bitpos)
-  newData.splice(insertAt, 0, new Element(null, newNode.id))
-
-  return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newData)
+  newData[elementAt] = new Element(null, newNode.id)
+  return create(node.store, node.config, node.map, node.depth, newData)
 }
 
 // similar to addNewElement() but for new child nodes
@@ -692,14 +660,14 @@ async function updateNode (node, elementAt, key, newChild) {
   let newElement = new Element(null, newChild.id)
   let newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, node.config, node.dataMap, node.nodeMap, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData)
 }
 
 // take a node, extract all of its local entries and put them into a new node with a single
 // bucket; used for collapsing a node and sending it upward
 function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
-  let newDataMap = setBit(0, mask(hash, 0, node.config.bitWidth), 1)
+  let newMap = setBit(0, mask(hash, 0, node.config.bitWidth), 1)
   let newBucket = node.data.reduce((p, c, i) => {
     if (i === elementAt) {
       if (c.bucket.length === 1) { // only element in bucket, skip it
@@ -716,7 +684,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   }, [])
   newBucket.sort((a, b) => Buffer.compare(a.key, b.key))
   let newElement = new Element(newBucket)
-  return create(node.store, node.config, newDataMap, 0, 0, [ newElement ])
+  return create(node.store, node.config, newMap, 0, [ newElement ])
 }
 
 // simple delete from an existing bucket in this node
@@ -744,19 +712,11 @@ async function collapseNodeInline (node, bitpos, newNode) {
   assert(newNode.data[0].bucket)
   let newBucket = newNode.data[0].bucket.slice()
   let newElement = new Element(newBucket)
-
-  let oldIndex = nodeIndex(node.nodeMap, node.data, bitpos)
-  let newIndex = index(node.dataMap, bitpos)
-  assert(oldIndex >= newIndex)
+  let elementIndex = index(node.map, bitpos)
   let newData = node.data.slice()
-  newData.splice(oldIndex, 1) // remove old node
-  newData.splice(newIndex, 0, newElement)
+  newData[elementIndex] = newElement
 
-  let newDataMap = node.dataMap
-  newDataMap = setBit(newDataMap, bitpos, 1)
-  let newNodeMap = node.nodeMap
-  newNodeMap = setBit(newNodeMap, bitpos, 0)
-  return create(node.store, node.config, newDataMap, newNodeMap, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData)
 }
 
 function buildConfig (options) {
@@ -838,14 +798,13 @@ function traverse (rootBlock, currentBlock, depth, key, isEqual) {
   assert(Buffer.isBuffer(hash))
   const bitpos = mask(hash, depth, node.config.bitWidth)
 
-  if (bitmapHas(node.dataMap, bitpos)) { // should be in a bucket in this node
-    return findDataElement(node, bitpos, key, (found, elementAt, element, bucketIndex, bucketEntry) => {
-      return { value: found ? bucketEntry.value : null, nextId: null }
-    })
-  } else if (bitmapHas(node.nodeMap, bitpos)) { // should be in a child node
-    return findNodeElement(node, bitpos, (elementAt, element) => {
-      return { value: null, nextId: element.link }
-    })
+  if (bitmapHas(node.map, bitpos)) {
+    let { data, link } = findElement(node, bitpos, key)
+    if (data) {
+      return { value: data.found ? data.bucketEntry.value : null, nextId: null }
+    } else { // link
+      return { value: null, nextId: link.element.link }
+    }
   } else { // we don't have an element for this hash portion
     return { value: null, nextId: null }
   }
@@ -877,9 +836,7 @@ function isRootSerializable (serializable) {
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
 function isSerializable (serializable) {
-  return Array.isArray(serializable.data) &&
-    typeof serializable.dataMap === 'number' &&
-    typeof serializable.nodeMap === 'number'
+  return Array.isArray(serializable.data) && typeof serializable.map === 'number'
 }
 
 /**
@@ -917,7 +874,7 @@ function fromSerializable (store, id, serializable, options = null, depth = 0) {
   }
   assert(Array.isArray(serializable.data))
   let data = serializable.data.map(Element.fromSerializable)
-  let node = new IAMap(store, options, serializable.dataMap, serializable.nodeMap, depth, data)
+  let node = new IAMap(store, options, serializable.map, depth, data)
   if (id != null) {
     ro(node, 'id', id)
   }

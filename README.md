@@ -149,12 +149,12 @@ resolves to a `IAMap` instance.
 * **`options`** _(`Object`)_: Options for this IAMap
   * **`options.codec`** _(`string`)_: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
     hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with [`IAMap.registerHasher`](#IAMap__registerHasher).
-  * **`options.bitWidth`** _(`number`, optional, default=`5`)_: The number of bits to extract from the hash to form an element index at
-    each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the element index, since 2^5=32,
-    each node will store up to 32 elements (child nodes and/or entry buckets). The maximum depth of the Map is
+  * **`options.bitWidth`** _(`number`, optional, default=`5`)_: The number of bits to extract from the hash to form a data element index at
+    each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
+    each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
     determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
     produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
-    currently allowed is `8` which will store 256 elements in each node.
+    currently allowed is `8` which will store 256 data elements in each node.
   * **`options.bucketSize`** _(`number`, optional, default=`8`)_: The maximum number of collisions acceptable at each level of the Map. A
     collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
     bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
@@ -190,7 +190,7 @@ IAMap.
   function identifier, e.g. `'murmur3-32'`.
 * **`hasherBytes`** _(`number`)_: The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
 * **`hasher`** _(`function`)_: A hash function that takes a `Buffer` derived from the `key` values used for this
-  Map and returns a `Buffer` (or a `Buffer`-like, such that each element of the array contains a single byte value).
+  Map and returns a `Buffer` (or a `Buffer`-like, such that each data element of the array contains a single byte value).
 
 <a name="IAMap"></a>
 ### `class IAMap`
@@ -208,12 +208,11 @@ The `IAMap` constructor should not be used directly. Use `IAMap.create()` or `IA
   * **`config.bitWidth`** _(`number`)_: The number of bits used at each level of this `IAMap`. See [`IAMap.create`](#IAMap__create)
     for more details.
   * **`config.bucketSize`** _(`number`)_: TThe maximum number of collisions acceptable at each level of the Map.
-* **`dataMap`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by data entries, each data entry
-  contains an bucket of entries
-* **`nodeMap`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by child nodes
+* **`map`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by data entries or child node links,
+  each data entry contains an bucket of entries.
 * **`depth`** _(`number`, optional, default=`0`)_: Depth of the current node in the IAMap, `depth` is used to extract bits from the
   key hashes to locate slots
-* **`elements`** _(`Array`, optional, default=`[]`)_: Array of elements (an internal `Element` type), each of which contains a
+* **`data`** _(`Array`, optional, default=`[]`)_: Array of data elements (an internal `Element` type), each of which contains a
   bucket of entries or an ID of a child node
   See [`IAMap.create`](#IAMap__create) for more details.
 
@@ -316,7 +315,7 @@ Asynchronously emit the IDs of this `IAMap` and all of its children.
 ### `IAMap#toSerializable()`
 
 Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
-JavaScript `Object` including a representation of its elements array that the key/value pairs it contains as well as
+JavaScript `Object` including a representation of its data array that the key/value pairs it contains as well as
 the identifiers of child nodes.
 Root nodes (depth==0) contain the full map configuration information, while intermediate and leaf nodes contain only
 data that cannot be inferred by traversal from a root node that already has this data (codec, bitWidth and bucketSize).
@@ -332,22 +331,20 @@ Root node form:
   codec: string
   bitWidth: number
   bucketSize: number
-  dataMap: number
-  nodeMap: number
-  elements: Array
+  map: number
+  data: Array
 }
 ```
 
 Intermediate and leaf node form:
 ```
 {
-  dataMap: number
-  nodeMap: number
-  elements: Array
+  map: number
+  data: Array
 }
 ```
 
-Where `elements` is an array of a mix of either buckets or links:
+Where `data` is an array of a mix of either buckets or links:
 
 * A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
   or whatever type has been provided in `set()` operations for this `IAMap`.

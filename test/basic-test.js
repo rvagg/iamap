@@ -14,8 +14,7 @@ test('empty object', async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   })
   t.strictEqual(store.map.size, 1)
@@ -42,19 +41,17 @@ test('test basic set/get', async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   })
   t.strictDeepEqual(newMap.toSerializable(), {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: newMap.dataMap,
-    nodeMap: 0,
+    map: newMap.map,
     data: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
   })
-  t.ok(newMap.dataMap !== 0)
+  t.ok(newMap.map !== 0)
   t.strictEqual(store.map.size, 2)
   t.strictEqual(store.saves, 2)
   t.strictEqual(store.loads, 0)
@@ -80,19 +77,17 @@ test('test basic set/set-same/get', async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: newMap1.dataMap,
-    nodeMap: 0,
+    map: newMap1.map,
     data: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
   })
-  t.ok(newMap1.dataMap !== 0)
+  t.ok(newMap1.map !== 0)
   t.strictEqual(store.map.size, 2)
   t.strictEqual(store.saves, 2)
   t.strictEqual(store.loads, 0)
@@ -121,28 +116,25 @@ test('test basic set/update/get', async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: newMap1.dataMap,
-    nodeMap: 0,
+    map: newMap1.map,
     data: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
   })
-  t.ok(newMap1.dataMap !== 0)
+  t.ok(newMap1.map !== 0)
   t.strictDeepEqual(newMap2.toSerializable(), {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: newMap1.dataMap,
-    nodeMap: 0,
+    map: newMap1.map,
     data: [ [ [ Buffer.from('foo'), 'baz' ] ] ]
   })
-  t.ok(newMap2.dataMap !== 0)
+  t.ok(newMap2.map !== 0)
   t.strictEqual(store.map.size, 3)
   t.strictEqual(store.saves, 3)
   t.strictEqual(store.loads, 0)
@@ -171,16 +163,14 @@ test('test basic set/get/delete', async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   })
   t.strictDeepEqual(setMap.toSerializable(), {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: setMap.dataMap,
-    nodeMap: 0,
+    map: setMap.map,
     data: [ [ [ Buffer.from('foo'), 'bar' ] ] ]
   })
   // should be back to square one
@@ -262,8 +252,7 @@ test('test predictable fill vertical and collapse', async (t) => {
     t.strictEqual(await map.get(Buffer.from([ k, k, k, 1 ])), 'pos2+1')
     t.strictEqual(await map.get(Buffer.from([ k, k, k, 2 ])), 'pos2+2')
 
-    t.strictEqual(map.nodeMap, 0)
-    t.strictEqual(map.dataMap, 0b100) // data at position 2 but not 1 or 0
+    t.strictEqual(map.map, 0b100) // data at position 2 but not 1 or 0
     t.strictEqual(map.data.length, 1)
     t.strictEqual(map.data[0].link, null)
     t.ok(Array.isArray(map.data[0].bucket))
@@ -280,8 +269,7 @@ test('test predictable fill vertical and collapse', async (t) => {
 
   map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
 
-  t.strictEqual(map.nodeMap, 0b100) // position 2
-  t.strictEqual(map.dataMap, 0)
+  t.strictEqual(map.map, 0b100) // position 2
   t.strictEqual(map.data.length, 1)
   t.strictEqual(map.data[0].bucket, null)
   t.strictEqual(typeof map.data[0].link, 'number') // what's returned by store.save()
@@ -291,8 +279,7 @@ test('test predictable fill vertical and collapse', async (t) => {
   // because of [k,k,k,k] - each k is 8 bytes so 2 levels of 4 bytes each
   // the 6th level should be where we find our data because we have non-colliding hash portions
   for (let i = 0; i < 6; i++) {
-    t.strictEqual(child.nodeMap, 0b100) // position 2
-    t.strictEqual(child.dataMap, 0)
+    t.strictEqual(child.map, 0b100) // position 2
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
@@ -300,8 +287,7 @@ test('test predictable fill vertical and collapse', async (t) => {
   }
   // at the 7th level they all have a different hash portion: 1,2,3 so they should be in separate buckets
   t.strictEqual(child.data.length, 3)
-  t.strictEqual(child.nodeMap, 0)
-  t.strictEqual(child.dataMap, 0b1110) // data at positions 1,2,3, but not 0
+  t.strictEqual(child.map, 0b1110) // data at positions 1,2,3, but not 0
   for (let i = 0; i < 3; i++) {
     t.strictEqual(child.data[i].link, null)
     t.ok(Array.isArray(child.data[i].bucket))
@@ -336,16 +322,14 @@ test('test predictable fill vertical and collapse', async (t) => {
   child = map
   // 4 levels should be the same
   for (let i = 0; i < 4; i++) {
-    t.strictEqual(child.nodeMap, 0b100) // position 2
-    t.strictEqual(child.dataMap, 0)
+    t.strictEqual(child.map, 0b100) // position 2
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
     child = await IAMap.load(store, child.data[0].link, i + 1, options)
   }
 
-  t.strictEqual(child.nodeMap, 0)
-  t.strictEqual(child.dataMap, 0b101) // data at position 2 and 0
+  t.strictEqual(child.map, 0b101) // data at position 2 and 0
   t.strictEqual(child.data.length, 2)
   t.strictEqual(child.data[0].link, null)
   t.ok(Array.isArray(child.data[0].bucket))
@@ -378,8 +362,7 @@ test('test predictable fill vertical, switched delete', async (t) => {
   let child = map
   // 4 levels should be the same
   for (let i = 0; i < 4; i++) {
-    t.strictEqual(child.nodeMap, 0b100) // position 2
-    t.strictEqual(child.dataMap, 0)
+    t.strictEqual(child.map, 0b100) // position 2
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
@@ -387,8 +370,7 @@ test('test predictable fill vertical, switched delete', async (t) => {
   }
 
   // last level should have 2 buckets but with a bucket in 0 and a node in 2
-  t.strictEqual(child.nodeMap, 0)
-  t.strictEqual(child.dataMap, 0b101) // data at position 2 and 0
+  t.strictEqual(child.map, 0b101) // data at position 2 and 0
   t.strictEqual(child.data.length, 2)
   t.strictEqual(child.data[0].link, null)
   t.ok(Array.isArray(child.data[0].bucket))
@@ -430,8 +412,7 @@ test('test predictable fill vertical, larger buckets', async (t) => {
   let child = map
   // 4 levels should be the same
   for (let i = 0; i < 2; i++) {
-    t.strictEqual(child.nodeMap, 0b1000000) // position 6
-    t.strictEqual(child.dataMap, 0)
+    t.strictEqual(child.map, 0b1000000) // position 6
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
@@ -439,8 +420,7 @@ test('test predictable fill vertical, larger buckets', async (t) => {
   }
 
   // last level should have 2 buckets but with a bucket in 0 and a node in 2
-  t.strictEqual(child.nodeMap, 0)
-  t.strictEqual(child.dataMap, 0b111110) // data in postions 1-5
+  t.strictEqual(child.map, 0b111110) // data in postions 1-5
   t.strictEqual(child.data.length, 5)
   t.strictEqual(child.data[1].link, null)
   t.ok(Array.isArray(child.data[1].bucket))

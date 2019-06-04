@@ -19,8 +19,7 @@ test(`fill with ${PEAK} and empty`, async (t) => {
     codec: 'murmur3-32',
     bitWidth: 5,
     bucketSize: 8,
-    dataMap: 0,
-    nodeMap: 0,
+    map: 0,
     data: []
   })
   t.strictEqual(store.map.size, 1)
