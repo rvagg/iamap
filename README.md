@@ -115,7 +115,18 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`IAMap#directNodeCount()`](#IAMap_directNodeCount)
  * [`async IAMap#isInvariant()`](#IAMap_isInvariant)
  * [`IAMap#fromChildSerializable(store, id, serializable[, depth])`](#IAMap_fromChildSerializable)
- * [`IAMap.traverse(rootBlock, currentBlock, depth, key, isEqual)`](#IAMap__traverse)
+ * [`class GetTraversal`](#GetTraversal)
+ * [`GetTraversal#traverse()`](#GetTraversal_traverse)
+ * [`GetTraversal#next(block)`](#GetTraversal_next)
+ * [`GetTraversal#value()`](#GetTraversal_value)
+ * [`IAMap.traverseGet(rootBlock, key, isEqual)`](#IAMap__traverseGet)
+ * [`class EntriesTraversal`](#EntriesTraversal)
+ * [`EntriesTraversal#traverse()`](#EntriesTraversal_traverse)
+ * [`EntriesTraversal#next(block)`](#EntriesTraversal_next)
+ * [`EntriesTraversal#keys()`](#EntriesTraversal_keys)
+ * [`EntriesTraversal#values()`](#EntriesTraversal_values)
+ * [`EntriesTraversal#entries()`](#EntriesTraversal_entries)
+ * [`IAMap.traverseEntries(rootBlock)`](#IAMap__traverseEntries)
  * [`IAMap.isRootSerializable(serializable)`](#IAMap__isRootSerializable)
  * [`IAMap.isSerializable(serializable)`](#IAMap__isSerializable)
  * [`IAMap.fromSerializable(store, id, serializable[, options][, depth])`](#IAMap__fromSerializable)
@@ -386,32 +397,115 @@ configuration `options`. Intended to be used to instantiate child IAMap nodes fr
 * **`serializable`** _(`Object`)_: The serializable form of an IAMap node to be instantiated.
 * **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
 
-<a name="IAMap__traverse"></a>
-### `IAMap.traverse(rootBlock, currentBlock, depth, key, isEqual)`
+<a name="GetTraversal"></a>
+### `class GetTraversal`
 
-Perform a single-block synchronous traversal. Takes a root block, and a second block (either the
-root block or a child block), the depth of the second block in relation to the root, the key
-being looked up and an `isEqual()` for comparing identifiers. Performs the single-node traversal
-algorithm and halts if the value being looked up is contained within that block or if a child
-block is required to traverse further. It is up to the user to perform additional traversals on
-child blocks when they are available.
+A `GetTraversal` object is returned by the [`IAMap.traverseGet`](#IAMap__traverseGet) function for performing
+block-by-block traversals on an IAMap.
+
+<a name="GetTraversal_traverse"></a>
+### `GetTraversal#traverse()`
+
+Perform a single-block traversal.
+
+**Return value**  _(`Object`)_: A link to the next block required for further traversal (to be provided via
+  [`GetTraversal#next`](#GetTraversal_next)) or `null` if a value has been found (and is available via
+  [`GetTraversal#value`](#GetTraversal_value)) or the value doesn't exist.
+
+<a name="GetTraversal_next"></a>
+### `GetTraversal#next(block)`
+
+Provide the next block required for traversal.
+
+**Parameters:**
+
+* **`block`** _(`Object`)_: A serialized form of an IAMap intermediate/child block identified by an identifier
+  returned from [`GetTraversal#traverse`](#GetTraversal_traverse).
+
+<a name="GetTraversal_value"></a>
+### `GetTraversal#value()`
+
+Get the final value of the traversal, if one has been found.
+
+**Return value** : A value, if one has been found, otherwise `null` (if one has not been found or we are mid-traversal)
+
+<a name="IAMap__traverseGet"></a>
+### `IAMap.traverseGet(rootBlock, key, isEqual)`
+
+Perform a per-block synchronous traversal. Takes a root block, the key being looked up and an
+`isEqual()` for comparing identifiers. Returns a [`GetTraversal`](#GetTraversal) object for performing
+traversals block-by-block.
 
 **Parameters:**
 
 * **`rootBlock`** _(`Object`)_: The root block, for extracting the IAMap configuration data
-* **`currentBlock`** _(`Object`)_: The block currently being traversed. This may either be the root block
-  itself (for the start of a traversal) or any child block within the IAMap structure.
-* **`depth`** _(`number`)_: The distance from the root block, since child blocks don't contain their
-  depth information and we lose it when not performing a full recursive traversal.
 * **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
   acceptable `key` types.
 * **`isEqual`** _(`function`)_: A function that compares two identifiers in the data store. See
   [`IAMap.create`](#IAMap__create) for details on the backing store and the requirements of an `isEqual()` function.
 
-**Return value**  _(`Object`)_: The returned object is of the form `{ value, nextId }` where one of these properties
-  may be non-null. If the `nextId` is non-null, a further traversal is required on a child block
-  identified by `nextId` with a depth 1 greater than the current depth. Where `nextId` is `null`,
-  `value` will either be `null` or a value found within the current block.
+**Return value** : A [`GetTraversal`](#GetTraversal) object for performing the traversal block-by-block.
+
+<a name="EntriesTraversal"></a>
+### `class EntriesTraversal`
+
+An `EntriesTraversal` object is returned by the [`IAMap.traverseEntries`](#IAMap__traverseEntries) function for performing
+block-by-block traversals on an IAMap for the purpose of iterating over or collecting keys, values and
+key/value pairs.
+
+<a name="EntriesTraversal_traverse"></a>
+### `EntriesTraversal#traverse()`
+
+Perform a single-block traversal.
+
+**Return value**  _(`Object`)_: A link to the next block required for further traversal (to be provided via
+  [`EntriesTraversal#next`](#EntriesTraversal_next)) or `null` if there are no more nodes to be traversed in this IAMap.
+
+<a name="EntriesTraversal_next"></a>
+### `EntriesTraversal#next(block)`
+
+Provide the next block required for traversal.
+
+**Parameters:**
+
+* **`block`** _(`Object`)_: A serialized form of an IAMap intermediate/child block identified by an identifier
+  returned from [`EntriesTraversal#traverse`](#EntriesTraversal_traverse).
+
+<a name="EntriesTraversal_keys"></a>
+### `EntriesTraversal#keys()`
+
+An iterator providing all of the keys in the current IAMap node being traversed.
+
+**Return value**  _(`Iterator`)_: An iterator that yields keys in `Buffer` form (regardless of how they were set).
+
+<a name="EntriesTraversal_values"></a>
+### `EntriesTraversal#values()`
+
+An iterator providing all of the values in the current IAMap node being traversed.
+
+**Return value**  _(`Iterator`)_: An iterator that yields value objects.
+
+<a name="EntriesTraversal_entries"></a>
+### `EntriesTraversal#entries()`
+
+An iterator providing all of the entries in the current IAMap node being traversed in the form of
+{ key, value } pairs.
+
+**Return value**  _(`Iterator`)_: An iterator that yields objects with the properties `key` and `value`.
+
+<a name="IAMap__traverseEntries"></a>
+### `IAMap.traverseEntries(rootBlock)`
+
+Perform a per-block synchronous traversal of all nodes in the IAMap identified by the provided `rootBlock`
+allowing for collection / iteration over keys, values and k/v entry pairs.
+Returns an [`EntriesTraversal`](#EntriesTraversal) object for performing traversals block-by-block.
+
+**Parameters:**
+
+* **`rootBlock`** _(`Object`)_: The root block, for extracting the IAMap configuration data
+
+**Return value** : An [`EntriesTraversal`](#EntriesTraversal) object for performing the traversal block-by-block and collecting their
+  entries.
 
 <a name="IAMap__isRootSerializable"></a>
 ### `IAMap.isRootSerializable(serializable)`
