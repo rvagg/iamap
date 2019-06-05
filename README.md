@@ -33,7 +33,7 @@ The interface bears resemblance to a `Map` but with some crucial differences: as
 
 ```js
 // instantiate with a backing store and a hash function
-let map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+let map = await iamap.create(store, { hashAlg: 'murmur3-32' })
 // mutations create new copies
 map = await map.set('foo', 'bar')
 assert(await map.get('foo') === 'bar')
@@ -97,9 +97,9 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 
 ### Contents
 
- * [`async IAMap.create(store, options)`](#IAMap__create)
- * [`async IAMap.load(store, id)`](#IAMap__load)
- * [`IAMap.registerHasher(hashAlg, hashBytes, hasher)`](#IAMap__registerHasher)
+ * [`async iamap.create(store, options)`](#iamap__create)
+ * [`async iamap.load(store, id)`](#iamap__load)
+ * [`iamap.registerHasher(hashAlg, hashBytes, hasher)`](#iamap__registerHasher)
  * [`class IAMap`](#IAMap)
  * [`async IAMap#set(key, value)`](#IAMap_set)
  * [`async IAMap#get(key)`](#IAMap_get)
@@ -119,23 +119,23 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`GetTraversal#traverse()`](#GetTraversal_traverse)
  * [`GetTraversal#next(block)`](#GetTraversal_next)
  * [`GetTraversal#value()`](#GetTraversal_value)
- * [`IAMap.traverseGet(rootBlock, key, isEqual)`](#IAMap__traverseGet)
+ * [`iamap.traverseGet(rootBlock, key, isEqual)`](#iamap__traverseGet)
  * [`class EntriesTraversal`](#EntriesTraversal)
  * [`EntriesTraversal#traverse()`](#EntriesTraversal_traverse)
  * [`EntriesTraversal#next(block)`](#EntriesTraversal_next)
  * [`EntriesTraversal#keys()`](#EntriesTraversal_keys)
  * [`EntriesTraversal#values()`](#EntriesTraversal_values)
  * [`EntriesTraversal#entries()`](#EntriesTraversal_entries)
- * [`IAMap.traverseEntries(rootBlock)`](#IAMap__traverseEntries)
- * [`IAMap.isRootSerializable(serializable)`](#IAMap__isRootSerializable)
- * [`IAMap.isSerializable(serializable)`](#IAMap__isSerializable)
- * [`IAMap.fromSerializable(store, id, serializable[, options][, depth])`](#IAMap__fromSerializable)
+ * [`iamap.traverseEntries(rootBlock)`](#iamap__traverseEntries)
+ * [`iamap.isRootSerializable(serializable)`](#iamap__isRootSerializable)
+ * [`iamap.isSerializable(serializable)`](#iamap__isSerializable)
+ * [`iamap.fromSerializable(store, id, serializable[, options][, depth])`](#iamap__fromSerializable)
 
-<a name="IAMap__create"></a>
-### `async IAMap.create(store, options)`
+<a name="iamap__create"></a>
+### `async iamap.create(store, options)`
 
 ```js
-let map = await IAMap.create(store, options)
+let map = await iamap.create(store, options)
 ```
 
 Create a new IAMap instance with a backing store. This operation is asynchronous and returns a `Promise` that
@@ -152,7 +152,7 @@ resolves to a `IAMap` instance.
   The `store` object should take the following form: `{ async save(node):id, async load(id):node, isEqual(id,id):boolean }`
 * **`options`** _(`Object`)_: Options for this IAMap
   * **`options.hashAlg`** _(`string`)_: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
-    hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with [`IAMap.registerHasher`](#IAMap__registerHasher).
+    hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
   * **`options.bitWidth`** _(`number`, optional, default=`5`)_: The number of bits to extract from the hash to form a data element index at
     each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
     each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
@@ -164,25 +164,25 @@ resolves to a `IAMap` instance.
     bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
     pushed
 
-<a name="IAMap__load"></a>
-### `async IAMap.load(store, id)`
+<a name="iamap__load"></a>
+### `async iamap.load(store, id)`
 
 ```js
-let map = await IAMap.load(store, id)
+let map = await iamap.load(store, id)
 ```
 
-Create a IAMap instance loaded from a serialised form in a backing store. See [`IAMap.create`](#IAMap__create).
+Create a IAMap instance loaded from a serialised form in a backing store. See [`iamap.create`](#iamap__create).
 
 **Parameters:**
 
-* **`store`** _(`Object`)_: A backing store for this Map. See [`IAMap.create`](#IAMap__create).
+* **`store`** _(`Object`)_: A backing store for this Map. See [`iamap.create`](#iamap__create).
 * **`id`**: An content address / ID understood by the backing `store`.
 
-<a name="IAMap__registerHasher"></a>
-### `IAMap.registerHasher(hashAlg, hashBytes, hasher)`
+<a name="iamap__registerHasher"></a>
+### `iamap.registerHasher(hashAlg, hashBytes, hasher)`
 
 ```js
-IAMap.registerHasher(hashAlg, hashBytes, hasher)
+iamap.registerHasher(hashAlg, hashBytes, hasher)
 ```
 
 Register a new hash function. IAMap has no hash functions by default, at least one is required to create a new
@@ -201,15 +201,15 @@ IAMap.
 
 Immutable Asynchronous Map
 
-The `IAMap` constructor should not be used directly. Use `IAMap.create()` or `IAMap.load()` to instantiate.
+The `IAMap` constructor should not be used directly. Use `iamap.create()` or `iamap.load()` to instantiate.
 
 **Properties:**
 
 * **`id`** _(`any`)_: A unique identifier for this `IAMap` instance. IDs are generated by the backing store and
   are returned on `save()` operations.
-  * **`config.hashAlg`** _(`string`)_: The hash function used by this `IAMap` instance. See [`IAMap.create`](#IAMap__create) for more
+  * **`config.hashAlg`** _(`string`)_: The hash function used by this `IAMap` instance. See [`iamap.create`](#iamap__create) for more
     details.
-  * **`config.bitWidth`** _(`number`)_: The number of bits used at each level of this `IAMap`. See [`IAMap.create`](#IAMap__create)
+  * **`config.bitWidth`** _(`number`)_: The number of bits used at each level of this `IAMap`. See [`iamap.create`](#iamap__create)
     for more details.
   * **`config.bucketSize`** _(`number`)_: TThe maximum number of collisions acceptable at each level of the Map.
 * **`map`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by data entries or child node links,
@@ -218,7 +218,7 @@ The `IAMap` constructor should not be used directly. Use `IAMap.create()` or `IA
   key hashes to locate slots
 * **`data`** _(`Array`, optional, default=`[]`)_: Array of data elements (an internal `Element` type), each of which contains a
   bucket of entries or an ID of a child node
-  See [`IAMap.create`](#IAMap__create) for more details.
+  See [`iamap.create`](#iamap__create) for more details.
 
 <a name="IAMap_set"></a>
 ### `async IAMap#set(key, value)`
@@ -387,20 +387,20 @@ A `false` result from this method suggests a flaw in the implemetation.
 <a name="IAMap_fromChildSerializable"></a>
 ### `IAMap#fromChildSerializable(store, id, serializable[, depth])`
 
-A convenience shortcut to [`IAMap.fromSerializable`](#IAMap__fromSerializable) that uses this IAMap node instance's backing `store` and
+A convenience shortcut to [`iamap.fromSerializable`](#iamap__fromSerializable) that uses this IAMap node instance's backing `store` and
 configuration `options`. Intended to be used to instantiate child IAMap nodes from a root IAMap node.
 
 **Parameters:**
 
-* **`store`** _(`Object`)_: A backing store for this Map. See [`IAMap.create`](#IAMap__create).
-* **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
+* **`store`** _(`Object`)_: A backing store for this Map. See [`iamap.create`](#iamap__create).
+* **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. See [`iamap.fromSerializable`](#iamap__fromSerializable).
 * **`serializable`** _(`Object`)_: The serializable form of an IAMap node to be instantiated.
-* **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. See [`IAMap.fromSerializable`](#IAMap__fromSerializable).
+* **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. See [`iamap.fromSerializable`](#iamap__fromSerializable).
 
 <a name="GetTraversal"></a>
 ### `class GetTraversal`
 
-A `GetTraversal` object is returned by the [`IAMap.traverseGet`](#IAMap__traverseGet) function for performing
+A `GetTraversal` object is returned by the [`iamap.traverseGet`](#iamap__traverseGet) function for performing
 block-by-block traversals on an IAMap.
 
 <a name="GetTraversal_traverse"></a>
@@ -429,8 +429,8 @@ Get the final value of the traversal, if one has been found.
 
 **Return value** : A value, if one has been found, otherwise `null` (if one has not been found or we are mid-traversal)
 
-<a name="IAMap__traverseGet"></a>
-### `IAMap.traverseGet(rootBlock, key, isEqual)`
+<a name="iamap__traverseGet"></a>
+### `iamap.traverseGet(rootBlock, key, isEqual)`
 
 Perform a per-block synchronous traversal. Takes a root block, the key being looked up and an
 `isEqual()` for comparing identifiers. Returns a [`GetTraversal`](#GetTraversal) object for performing
@@ -442,14 +442,14 @@ traversals block-by-block.
 * **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
   acceptable `key` types.
 * **`isEqual`** _(`function`)_: A function that compares two identifiers in the data store. See
-  [`IAMap.create`](#IAMap__create) for details on the backing store and the requirements of an `isEqual()` function.
+  [`iamap.create`](#iamap__create) for details on the backing store and the requirements of an `isEqual()` function.
 
 **Return value** : A [`GetTraversal`](#GetTraversal) object for performing the traversal block-by-block.
 
 <a name="EntriesTraversal"></a>
 ### `class EntriesTraversal`
 
-An `EntriesTraversal` object is returned by the [`IAMap.traverseEntries`](#IAMap__traverseEntries) function for performing
+An `EntriesTraversal` object is returned by the [`iamap.traverseEntries`](#iamap__traverseEntries) function for performing
 block-by-block traversals on an IAMap for the purpose of iterating over or collecting keys, values and
 key/value pairs.
 
@@ -493,8 +493,8 @@ An iterator providing all of the entries in the current IAMap node being travers
 
 **Return value**  _(`Iterator`)_: An iterator that yields objects with the properties `key` and `value`.
 
-<a name="IAMap__traverseEntries"></a>
-### `IAMap.traverseEntries(rootBlock)`
+<a name="iamap__traverseEntries"></a>
+### `iamap.traverseEntries(rootBlock)`
 
 Perform a per-block synchronous traversal of all nodes in the IAMap identified by the provided `rootBlock`
 allowing for collection / iteration over keys, values and k/v entry pairs.
@@ -507,8 +507,8 @@ Returns an [`EntriesTraversal`](#EntriesTraversal) object for performing travers
 **Return value** : An [`EntriesTraversal`](#EntriesTraversal) object for performing the traversal block-by-block and collecting their
   entries.
 
-<a name="IAMap__isRootSerializable"></a>
-### `IAMap.isRootSerializable(serializable)`
+<a name="iamap__isRootSerializable"></a>
+### `iamap.isRootSerializable(serializable)`
 
 Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
 an IAMap before trying to instantiate it.
@@ -519,8 +519,8 @@ an IAMap before trying to instantiate it.
 
 **Return value**  _(`boolean`)_: An indication that the serialisable form is or is not an IAMap root node
 
-<a name="IAMap__isSerializable"></a>
-### `IAMap.isSerializable(serializable)`
+<a name="iamap__isSerializable"></a>
+### `iamap.isSerializable(serializable)`
 
 Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
 an IAMap node before trying to instantiate it.
@@ -532,26 +532,26 @@ This should pass for both root nodes as well as child nodes
 
 **Return value**  _(`boolean`)_: An indication that the serialisable form is or is not an IAMap node
 
-<a name="IAMap__fromSerializable"></a>
-### `IAMap.fromSerializable(store, id, serializable[, options][, depth])`
+<a name="iamap__fromSerializable"></a>
+### `iamap.fromSerializable(store, id, serializable[, options][, depth])`
 
 Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
 produced by [`IAMap#toSerializable`](#IAMap_toSerializable).
-Serialised forms of root nodes must satisfy both [`IAMap.isRootSerializable`](#IAMap__isRootSerializable) and [`IAMap.isSerializable`](#IAMap__isSerializable). For
+Serialised forms of root nodes must satisfy both [`iamap.isRootSerializable`](#iamap__isRootSerializable) and [`iamap.isSerializable`](#iamap__isSerializable). For
 root nodes, the `options` parameter will be ignored and the `depth` parameter must be the default value of `0`.
-Serialised forms of non-root nodes must satisfy [`IAMap.isSerializable`](#IAMap__isSerializable) and have a valid `options` parameter and
+Serialised forms of non-root nodes must satisfy [`iamap.isSerializable`](#iamap__isSerializable) and have a valid `options` parameter and
 a non-`0` `depth` parameter.
 
 **Parameters:**
 
-* **`store`** _(`Object`)_: A backing store for this Map. See [`IAMap.create`](#IAMap__create).
-* **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. Unlike [`IAMap.create`](#IAMap__create),
+* **`store`** _(`Object`)_: A backing store for this Map. See [`iamap.create`](#iamap__create).
+* **`id`** _(`Object`)_: An optional ID for the instantiated IAMap node. Unlike [`iamap.create`](#iamap__create),
   `fromSerializable()` does not `save()` a newly created IAMap node so an ID is not generated for it. If one is
   required for downstream purposes it should be provided, if the value is `null` or `undefined`, `node.id` will
   be `null` but will remain writable.
 * **`serializable`** _(`Object`)_: The serializable form of an IAMap node to be instantiated
 * **`options`** _(`Object`, optional, default=`null`)_: An options object for IAMap child node instantiation. Will be ignored for root
-  node instantiation (where `depth` = `0`) See [`IAMap.create`](#IAMap__create).
+  node instantiation (where `depth` = `0`) See [`iamap.create`](#iamap__create).
 * **`depth`** _(`number`, optional, default=`0`)_: The depth of the IAMap node. Where `0` is the root node and any `>0` number is a child
   node.
 

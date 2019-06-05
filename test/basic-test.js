@@ -2,14 +2,14 @@
 
 const { test } = require('tap')
 const { murmurHasher, identityHasher, memoryStore } = require('./common')
-const IAMap = require('../')
+const iamap = require('../')
 
-IAMap.registerHasher('murmur3-32', 32, murmurHasher)
-IAMap.registerHasher('identity', 32, identityHasher) // not recommended
+iamap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher('identity', 32, identityHasher) // not recommended
 
 test('empty object', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
     bitWidth: 5,
@@ -27,7 +27,7 @@ test('empty object', async (t) => {
 
 test('test basic set/get', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const newMap = await map.set('foo', 'bar')
 
   t.strictEqual(await newMap.get('foo'), 'bar')
@@ -64,7 +64,7 @@ test('test basic set/get', async (t) => {
 
 test('test basic set/set-same/get', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const newMap1 = await map.set('foo', 'bar')
   const newMap2 = await newMap1.set('foo', 'bar')
 
@@ -102,7 +102,7 @@ test('test basic set/set-same/get', async (t) => {
 
 test('test basic set/update/get', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const newMap1 = await map.set('foo', 'bar')
   const newMap2 = await newMap1.set('foo', 'baz')
 
@@ -149,7 +149,7 @@ test('test basic set/update/get', async (t) => {
 
 test('test basic set/get/delete', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const setMap = await map.set('foo', 'bar')
   const deleteMap = await setMap.delete('foo')
 
@@ -190,7 +190,7 @@ test('test basic set/get/delete', async (t) => {
 
 test('test predictable single level fill', async (t) => {
   const store = memoryStore()
-  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 3 })
+  let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 3 })
   // bitWidth of 4 yields 16 buckets, we can use 'identity' hash to feed keys that we know
   // will go into certain slots
   for (let i = 0; i < 16; i++) {
@@ -237,7 +237,7 @@ test('test predictable single level fill', async (t) => {
 test('test predictable fill vertical and collapse', async (t) => {
   const store = memoryStore()
   const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }
-  let map = await IAMap.create(store, options)
+  let map = await iamap.create(store, options)
 
   let k = (2 << 4) | 2
   // an 8-bit value with `2` in each of the 4-bit halves, for a `bitWidth` of 4 we are going to collide at
@@ -283,7 +283,7 @@ test('test predictable fill vertical and collapse', async (t) => {
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
-    child = await IAMap.load(store, child.data[0].link, i + 1, options)
+    child = await iamap.load(store, child.data[0].link, i + 1, options)
   }
   // at the 7th level they all have a different hash portion: 1,2,3 so they should be in separate buckets
   t.strictEqual(child.data.length, 3)
@@ -326,7 +326,7 @@ test('test predictable fill vertical and collapse', async (t) => {
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
-    child = await IAMap.load(store, child.data[0].link, i + 1, options)
+    child = await iamap.load(store, child.data[0].link, i + 1, options)
   }
 
   t.strictEqual(child.map, 0b101) // data at position 2 and 0
@@ -348,7 +348,7 @@ test('test predictable fill vertical and collapse', async (t) => {
 test('test predictable fill vertical, switched delete', async (t) => {
   const store = memoryStore()
   const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }
-  let map = await IAMap.create(store, options)
+  let map = await iamap.create(store, options)
   let k = (2 << 4) | 2
   // 3 entries at the lowest node, one part way back up, like last test
   map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
@@ -366,7 +366,7 @@ test('test predictable fill vertical, switched delete', async (t) => {
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
-    child = await IAMap.load(store, child.data[0].link, i + 1, options)
+    child = await iamap.load(store, child.data[0].link, i + 1, options)
   }
 
   // last level should have 2 buckets but with a bucket in 0 and a node in 2
@@ -389,7 +389,7 @@ test('test predictable fill vertical, switched delete', async (t) => {
 test('test predictable fill vertical, larger buckets', async (t) => {
   const store = memoryStore()
   const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 4 }
-  let map = await IAMap.create(store, options)
+  let map = await iamap.create(store, options)
   let k = (6 << 4) | 6 // let's try index 6 now
 
   // we're trying to trigger a compaction of a node which has a bucket of >1 entries, the first
@@ -416,7 +416,7 @@ test('test predictable fill vertical, larger buckets', async (t) => {
     t.strictEqual(child.data.length, 1)
     t.strictEqual(child.data[0].bucket, null)
     t.strictEqual(typeof child.data[0].link, 'number')
-    child = await IAMap.load(store, child.data[0].link, i + 1, options)
+    child = await iamap.load(store, child.data[0].link, i + 1, options)
   }
 
   // last level should have 2 buckets but with a bucket in 0 and a node in 2
@@ -447,7 +447,7 @@ test('test predictable fill vertical, larger buckets', async (t) => {
 test('test keys, values, entries', async (t) => {
   const store = memoryStore()
   // use the identity hash from the predictable fill test(s) to spread things out a bit
-  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+  let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
   let ids = []
   map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
@@ -498,7 +498,7 @@ test('test keys, values, entries', async (t) => {
 test('test non-store, sync block-by-block get traversal', async (t) => {
   const store = memoryStore()
   function isEqual (cid1, cid2) { return cid1.equals(cid2) }
-  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+  let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
   map = await map.set(Buffer.from([ k, k, 1 ]), 'pos2+1')
   map = await map.set(Buffer.from([ k, k, 2 ]), 'pos2+2')
@@ -508,7 +508,7 @@ test('test non-store, sync block-by-block get traversal', async (t) => {
   let rootBlock = store.load(map.id)
 
   let currentBlock = rootBlock
-  let traversal = IAMap.traverseGet(rootBlock, deepKey, isEqual)
+  let traversal = iamap.traverseGet(rootBlock, deepKey, isEqual)
 
   for (let i = 0; i < 4; i++) {
     let expectedChildId = currentBlock.data[0].link
@@ -524,7 +524,7 @@ test('test non-store, sync block-by-block get traversal', async (t) => {
 
 test('test non-store, sync block-by-block keys traversal', async (t) => {
   const store = memoryStore()
-  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+  let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
   map = await map.set(Buffer.from([ k, k, 1 ]), 'pos2+1')
   map = await map.set(Buffer.from([ k, k, 2 ]), 'pos2+2')
@@ -533,7 +533,7 @@ test('test non-store, sync block-by-block keys traversal', async (t) => {
   let rootBlock = store.load(map.id)
   let currentBlock = rootBlock
 
-  let traversal = IAMap.traverseEntries(rootBlock)
+  let traversal = iamap.traverseEntries(rootBlock)
 
   for (let i = 0; i < 4; i++) {
     t.strictDeepEqual([...traversal.keys()], [])
