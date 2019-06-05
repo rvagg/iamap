@@ -52,7 +52,7 @@ const multihashing = require('multihashing')
 const multicodec = require('multicodec')
 const CID = require('cids')
 const split2 = require('split2')
-const IAMap = require('../')
+const iamap = require('../')
 
 const dbLocation = '/tmp/iamap-level-example.db'
 
@@ -109,7 +109,7 @@ function murmurHasher (key) {
   return b
 }
 // Names must match a multicodec name, see https://github.com/multiformats/multicodec/blob/master/table.csv
-IAMap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher('murmur3-32', 32, murmurHasher)
 
 // recursive async iterator that finds and emits all package.json files found from our parent directory downward
 async function * findJs (dir) {
@@ -156,10 +156,10 @@ async function createMap (id) {
     if (!CID.isCID(id)) {
       id = new CID(id)
     }
-    return IAMap.load(store, id)
+    return iamap.load(store, id)
   }
   // new map with default options, our hasher and custom store
-  return IAMap.create(store, { hashAlg: 'murmur3-32' })
+  return iamap.create(store, { hashAlg: 'murmur3-32' })
 }
 
 // --index <dir>

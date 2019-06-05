@@ -2,16 +2,16 @@
 
 const { test } = require('tap')
 const { murmurHasher, identityHasher, memoryStore } = require('./common')
-const IAMap = require('../')
+const iamap = require('../')
 
-IAMap.registerHasher('murmur3-32', 32, murmurHasher)
-IAMap.registerHasher('identity', 32, identityHasher) // not recommended
+iamap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher('identity', 32, identityHasher) // not recommended
 
 let Constructor
 
 test('empty object', async (t) => {
   const store = memoryStore()
-  const map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const emptySerialized = {
     hashAlg: 'murmur3-32',
     bitWidth: 5,
@@ -22,7 +22,7 @@ test('empty object', async (t) => {
 
   t.strictDeepEqual(map.toSerializable(), emptySerialized)
 
-  const loadedMap = await IAMap.load(store, map.id)
+  const loadedMap = await iamap.load(store, map.id)
   t.strictDeepEqual(loadedMap, map)
 
   Constructor = map.constructor
@@ -39,7 +39,7 @@ test('empty custom', async (t) => {
   }
   const id = await store.save(emptySerialized)
 
-  const map = await IAMap.load(store, id)
+  const map = await iamap.load(store, id)
   t.strictDeepEqual(map.toSerializable(), emptySerialized)
   t.strictEqual(map.config.hashAlg, 'identity')
   t.strictEqual(map.config.bitWidth, 8)
@@ -57,7 +57,7 @@ test('child custom', async (t) => {
   }
   const id = await store.save(emptySerialized)
 
-  const map = await IAMap.load(store, id, 10, {
+  const map = await iamap.load(store, id, 10, {
     hashAlg: 'identity',
     bitWidth: 7,
     bucketSize: 30
@@ -83,63 +83,63 @@ test('malformed', async (t) => {
     data: []
   }
   let id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.hashAlg = 'identity' // identity
   emptySerialized.bitWidth = 'foo'
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.bitWidth = -1
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.bitWidth = 4
   emptySerialized.bucketSize = 'foo'
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.bucketSize = -1
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.bucketSize = 3
   emptySerialized.data = { nope: 'nope' }
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.data = []
   emptySerialized.map = 'foo'
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.map = 0
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id, 'foo'))
+  t.rejects(iamap.load(store, id, 'foo'))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.data = [ { woot: 'nope' } ]
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.data = [ [ { nope: 'nope' } ] ]
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id))
+  t.rejects(iamap.load(store, id))
 
   emptySerialized = {
     map: 0b110011,
     data: []
   }
   id = await store.save(emptySerialized)
-  t.resolves(IAMap.load(store, id, 32, {
+  t.resolves(iamap.load(store, id, 32, {
     hashAlg: 'identity',
     bitWidth: 7,
     bucketSize: 30
@@ -147,14 +147,14 @@ test('malformed', async (t) => {
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   id = await store.save(emptySerialized)
-  t.rejects(IAMap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
+  t.rejects(iamap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
     hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: 30
   }))
 
   t.throws(() => {
-    IAMap.fromSerializable(store, undefined, emptySerialized, {
+    iamap.fromSerializable(store, undefined, emptySerialized, {
       hashAlg: 'identity',
       bitWidth: 5,
       bucketSize: 2
@@ -179,11 +179,11 @@ test('fromChildSerializable', async (t) => {
     data: []
   }
 
-  t.strictEqual(IAMap.isRootSerializable(emptySerializedRoot), true)
-  t.strictEqual(IAMap.isSerializable(emptySerializedRoot), true)
-  t.strictEqual(IAMap.isSerializable(emptySerializedChild), true)
+  t.strictEqual(iamap.isRootSerializable(emptySerializedRoot), true)
+  t.strictEqual(iamap.isSerializable(emptySerializedRoot), true)
+  t.strictEqual(iamap.isSerializable(emptySerializedChild), true)
 
-  let root = await IAMap.fromSerializable(store, 'somerootid', emptySerializedRoot)
+  let root = await iamap.fromSerializable(store, 'somerootid', emptySerializedRoot)
 
   t.strictDeepEqual(root.toSerializable(), emptySerializedRoot)
   t.strictEqual(root.id, 'somerootid')
@@ -214,30 +214,30 @@ test('bad loads', async (t) => {
   }
   let id = await store.save(emptySerialized)
 
-  t.rejects(IAMap.load(store, id, 32, {
+  t.rejects(iamap.load(store, id, 32, {
     bitWidth: 8,
     bucketSize: 30
   })) // no hashAlg
 
-  t.rejects(IAMap.load(store, id, 32, {
+  t.rejects(iamap.load(store, id, 32, {
     hashAlg: { yoiks: true },
     bitWidth: 8,
     bucketSize: 30
   })) // bad hashAlg
 
-  t.rejects(IAMap.load(store, id, 32, {
+  t.rejects(iamap.load(store, id, 32, {
     hashAlg: 'identity',
     bitWidth: 'foo',
     bucketSize: 30
   })) // bad bitWidth
 
-  t.rejects(IAMap.load(store, id, 32, {
+  t.rejects(iamap.load(store, id, 32, {
     hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: true
   })) // bad bucketSize
 
-  t.rejects(IAMap.load(store, id, 'foo', {
+  t.rejects(iamap.load(store, id, 'foo', {
     hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: 8

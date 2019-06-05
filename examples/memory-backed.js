@@ -3,7 +3,7 @@
 const fs = require('fs').promises
 const path = require('path')
 const murmurhash3 = require('murmurhash3js-revisited')
-const IAMap = require('../')
+const iamap = require('../')
 
 /*
 
@@ -57,11 +57,11 @@ function murmurHasher (key) {
 }
 
 // Names must match a multicodec name, see https://github.com/multiformats/multicodec/blob/master/table.csv
-IAMap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher('murmur3-32', 32, murmurHasher)
 
 async function memoryBacked () {
   const store = memoryStore() // new store
-  let map = await IAMap.create(store, { hashAlg: 'murmur3-32' }) // new map with default options, our hasher and custom store
+  let map = await iamap.create(store, { hashAlg: 'murmur3-32' }) // new map with default options, our hasher and custom store
 
   for await (let pkg of findPackages(path.join(__dirname, '..'))) {
     // Store a string key and a JavaScript object as a value, this will work for our store but if we needed to store it

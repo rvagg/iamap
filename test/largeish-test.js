@@ -2,9 +2,9 @@
 
 const { test } = require('tap')
 const { murmurHasher, memoryStore } = require('./common')
-const IAMap = require('../')
+const iamap = require('../')
 
-IAMap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher('murmur3-32', 32, murmurHasher)
 
 const PEAK = 100 // not huge but delete is super expensive
 
@@ -13,7 +13,7 @@ let loadId
 let keys = []
 
 test(`fill with ${PEAK}`, async (t) => {
-  let map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  let map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   let expectedValues = []
   let expectedEntries = []
 
@@ -82,7 +82,7 @@ test(`fill with ${PEAK}`, async (t) => {
 })
 
 test(`load ${PEAK} node map and empty it`, async (t) => {
-  let map = await IAMap.load(store, loadId)
+  let map = await iamap.load(store, loadId)
 
   t.strictEqual(await map.get('foo'), 'bar')
   t.strictEqual(await map.get('bar'), 'booz')
