@@ -12,8 +12,10 @@ const store = memoryStore() // same store across tests
 let loadId
 let keys = []
 
-test(`fill with ${PEAK} and empty`, async (t) => {
+test(`fill with ${PEAK}`, async (t) => {
   let map = await IAMap.create(store, { hashAlg: 'murmur3-32' })
+  let expectedValues = []
+  let expectedEntries = []
 
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
@@ -41,13 +43,40 @@ test(`fill with ${PEAK} and empty`, async (t) => {
   t.strictEqual(await map.isInvariant(), true)
 
   for (let i = 0; i < PEAK; i++) {
-    map = await map.set(`k${i}`, `v${i}`)
-    keys.push(`k${i}`)
+    let key = `k${i}`
+    let value = `v${i}`
+    map = await map.set(key, value)
+    keys.push(key)
+    expectedValues.push(value)
+    expectedEntries.push(JSON.stringify({ key, value }))
   }
   for (let i = PEAK - 1; i >= 0; i--) {
     t.strictEqual(await map.get(`k${i}`), `v${i}`)
     t.strictEqual(await map.has(`k${i}`), true)
   }
+
+  let actualKeys = []
+  for await (let k of map.keys()) {
+    actualKeys.push(k.toString())
+  }
+  let actualValues = []
+  for await (let v of map.values()) {
+    actualValues.push(v.toString())
+  }
+  let actualEntries = []
+  for await (let e of map.entries()) {
+    actualEntries.push(JSON.stringify({ key: e.key.toString(), value: e.value }))
+  }
+
+  keys.sort()
+  expectedValues.sort()
+  expectedEntries.sort()
+  actualKeys.sort()
+  actualValues.sort()
+  actualEntries.sort()
+  t.deepEqual(actualKeys, [ 'bar', 'foo' ].concat(keys))
+  t.deepEqual(actualValues, [ 'bar', 'booz' ].concat(expectedValues))
+  t.deepEqual(actualEntries, [ '{"key":"bar","value":"booz"}', '{"key":"foo","value":"bar"}' ].concat(expectedEntries))
 
   loadId = map.id
 })

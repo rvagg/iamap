@@ -271,13 +271,16 @@ class IAMap {
    * @async
    */
   async get (key) {
-    const traversal = traverse(this.config, this, this.depth, key, this.store.isEqual)
-    if (traversal.nextId !== null) {
-      let child = await load(this.store, traversal.nextId, this.depth + 1, this.config)
+    const traversal = traverseGet(this, key, this.store.isEqual, this.depth)
+    while (true) {
+      let nextId = traversal.traverse()
+      if (!nextId) {
+        return traversal.value()
+      }
+      let child = await this.store.load(nextId)
       assert(child)
-      return child.get(key)
+      traversal.next(child)
     }
-    return traversal.value
   }
 
   /**
@@ -395,16 +398,7 @@ class IAMap {
    * @async
    */
   async * keys () {
-    for (let e of this.data) {
-      if (e.bucket) {
-        for (let kv of e.bucket) {
-          yield kv.key
-        }
-      } else {
-        let child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.keys()
-      }
-    }
+    yield * traverseKV(this, 'keys')
   }
 
   /**
@@ -415,16 +409,7 @@ class IAMap {
    * @async
    */
   async * values () {
-    for (let e of this.data) {
-      if (e.bucket) {
-        for (let kv of e.bucket) {
-          yield kv.value
-        }
-      } else {
-        let child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.values()
-      }
-    }
+    yield * traverseKV(this, 'values')
   }
 
   /**
@@ -435,16 +420,7 @@ class IAMap {
    * @async
    */
   async * entries () {
-    for (let e of this.data) {
-      if (e.bucket) {
-        for (let kv of e.bucket) {
-          yield { key: kv.key, value: kv.value }
-        }
-      } else {
-        let child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.entries()
-      }
-    }
+    yield * traverseKV(this, 'entries')
   }
 
   /**
@@ -760,53 +736,216 @@ function buildConfig (options) {
 }
 
 /* istanbul ignore next */
-const dummyStore = { load () {}, save () {} }
+const dummyStore = { load () {}, save () {}, isEqual () { return false } }
 
 /**
- * Perform a single-block synchronous traversal. Takes a root block, and a second block (either the
- * root block or a child block), the depth of the second block in relation to the root, the key
- * being looked up and an `isEqual()` for comparing identifiers. Performs the single-node traversal
- * algorithm and halts if the value being looked up is contained within that block or if a child
- * block is required to traverse further. It is up to the user to perform additional traversals on
- * child blocks when they are available.
+ * A `GetTraversal` object is returned by the {@link IAMap.traverseGet} function for performing
+ * block-by-block traversals on an IAMap.
+ */
+class GetTraversal {
+  constructor (rootBlock, key, isEqual, depth) {
+    let isIAMap = IAMap.isIAMap(rootBlock)
+    this._config = isIAMap ? rootBlock.config : rootBlock
+    this._key = Buffer.isBuffer(key) ? key : Buffer.from(key)
+    this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
+
+    this._store = Object.assign(dummyStore, { isEqual })
+    this._hash = hasherRegistry[this._config.hashAlg].hasher(this._key)
+    assert(Buffer.isBuffer(this._hash))
+    this._node = isIAMap ? rootBlock : fromSerializable(this._store, 0, rootBlock, rootBlock, depth)
+    this._value = null
+  }
+
+  /**
+   * Perform a single-block traversal.
+   *
+   * @returns {Object} A link to the next block required for further traversal (to be provided via
+   * {@link GetTraversal#next}) or `null` if a value has been found (and is available via
+   * {@link GetTraversal#value}) or the value doesn't exist.
+   */
+  traverse () {
+    const bitpos = mask(this._hash, this._depth, this._config.bitWidth)
+    if (bitmapHas(this._node.map, bitpos)) {
+      let { data, link } = findElement(this._node, bitpos, this._key)
+      if (data && data.found) { // found!
+        this._value = data.bucketEntry.value
+      } else if (link) { // link
+        return link.element.link
+      }
+    }
+    return null
+  }
+
+  /**
+   * Provide the next block required for traversal.
+   *
+   * @param {Object} block A serialized form of an IAMap intermediate/child block identified by an identifier
+   * returned from {@link GetTraversal#traverse}.
+   */
+  next (block) {
+    this._node = fromSerializable(this._store, 0, block, this._config, ++this._depth)
+  }
+
+  /**
+   * Get the final value of the traversal, if one has been found.
+   *
+   * @returns A value, if one has been found, otherwise `null` (if one has not been found or we are mid-traversal)
+   */
+  value () {
+    return this._value
+  }
+}
+
+/**
+ * Perform a per-block synchronous traversal. Takes a root block, the key being looked up and an
+ * `isEqual()` for comparing identifiers. Returns a {@link GetTraversal} object for performing
+ * traversals block-by-block.
  *
- * @name IAMap.traverse
+ * @name IAMap.traverseGet
  * @function
  * @param {Object} rootBlock The root block, for extracting the IAMap configuration data
- * @param {Object} currentBlock The block currently being traversed. This may either be the root block
- * itself (for the start of a traversal) or any child block within the IAMap structure.
- * @param {number} depth The distance from the root block, since child blocks don't contain their
- * depth information and we lose it when not performing a full recursive traversal.
  * @param {string|array|Buffer|ArrayBuffer} key - A key to remove. See {@link IAMap#set} for details about
  * acceptable `key` types.
  * @param {function} isEqual A function that compares two identifiers in the data store. See
  * {@link IAMap.create} for details on the backing store and the requirements of an `isEqual()` function.
- * @returns {Object} The returned object is of the form `{ value, nextId }` where one of these properties
- * may be non-null. If the `nextId` is non-null, a further traversal is required on a child block
- * identified by `nextId` with a depth 1 greater than the current depth. Where `nextId` is `null`,
- * `value` will either be `null` or a value found within the current block.
+ * @returns A {@link GetTraversal} object for performing the traversal block-by-block.
  */
-function traverse (rootBlock, currentBlock, depth, key, isEqual) {
-  if (!Buffer.isBuffer(key)) {
-    key = Buffer.from(key)
-  }
-  const store = Object.assign(dummyStore, { isEqual })
-  const node = IAMap.isIAMap(currentBlock)
-    ? currentBlock
-    : fromSerializable(store, 0, currentBlock, rootBlock, depth)
-  const hash = hasherRegistry[node.config.hashAlg].hasher(key)
-  assert(Buffer.isBuffer(hash))
-  const bitpos = mask(hash, depth, node.config.bitWidth)
+function traverseGet (rootBlock, key, isEqual, depth) {
+  return new GetTraversal(rootBlock, key, isEqual, depth)
+}
 
-  if (bitmapHas(node.map, bitpos)) {
-    let { data, link } = findElement(node, bitpos, key)
-    if (data) {
-      return { value: data.found ? data.bucketEntry.value : null, nextId: null }
-    } else { // link
-      return { value: null, nextId: link.element.link }
+/**
+ * An `EntriesTraversal` object is returned by the {@link IAMap.traverseEntries} function for performing
+ * block-by-block traversals on an IAMap for the purpose of iterating over or collecting keys, values and
+ * key/value pairs.
+ */
+class EntriesTraversal {
+  constructor (rootBlock, depth) {
+    this._config = IAMap.isIAMap(rootBlock) ? rootBlock.config : rootBlock
+    this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
+
+    this._stack = []
+    this.next(rootBlock)
+  }
+
+  _peek () {
+    return this._stack[this._stack.length - 1]
+  }
+
+  _nextLink (node, start) {
+    let next = start
+    for (; next < node.data.length && !node.data[next].link; next++) {}
+    return next === node.data.length ? -1 : next
+  }
+
+  /**
+   * Perform a single-block traversal.
+   *
+   * @returns {Object} A link to the next block required for further traversal (to be provided via
+   * {@link EntriesTraversal#next}) or `null` if there are no more nodes to be traversed in this IAMap.
+   */
+  traverse () {
+    let n = this._peek()
+    while (!n || n.nextLink === -1) {
+      this._stack.pop()
+      n = this._peek()
+      if (!n) {
+        return null
+      }
     }
-  } else { // we don't have an element for this hash portion
-    return { value: null, nextId: null }
+    let link = n.node.data[n.nextLink].link
+    n.nextLink = this._nextLink(n.node, n.nextLink + 1)
+    return link
+  }
+
+  /**
+   * Provide the next block required for traversal.
+   *
+   * @param {Object} block A serialized form of an IAMap intermediate/child block identified by an identifier
+   * returned from {@link EntriesTraversal#traverse}.
+   */
+  next (block) {
+    let node = IAMap.isIAMap(block)
+      ? block
+      : fromSerializable(dummyStore, 0, block, this._config, this._stack.length + this._depth)
+    this._stack.push({ node, nextLink: this._nextLink(node, 0) })
+  }
+
+  * _visit () {
+    let n = this._peek()
+    if (n) {
+      for (let e of n.node.data) {
+        if (e.bucket) {
+          for (let kv of e.bucket) {
+            yield kv
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * An iterator providing all of the keys in the current IAMap node being traversed.
+   *
+   * @returns {Iterator} An iterator that yields keys in `Buffer` form (regardless of how they were set).
+   */
+  * keys () {
+    for (let kv of this._visit()) {
+      yield kv.key
+    }
+  }
+
+  /**
+   * An iterator providing all of the values in the current IAMap node being traversed.
+   *
+   * @returns {Iterator} An iterator that yields value objects.
+   */
+  * values () {
+    for (let kv of this._visit()) {
+      yield kv.value
+    }
+  }
+
+  /**
+   * An iterator providing all of the entries in the current IAMap node being traversed in the form of
+   * { key, value } pairs.
+   *
+   * @returns {Iterator} An iterator that yields objects with the properties `key` and `value`.
+   */
+  * entries () {
+    for (let kv of this._visit()) {
+      yield { key: kv.key, value: kv.value }
+    }
+  }
+}
+
+/**
+ * Perform a per-block synchronous traversal of all nodes in the IAMap identified by the provided `rootBlock`
+ * allowing for collection / iteration over keys, values and k/v entry pairs.
+ * Returns an {@link EntriesTraversal} object for performing traversals block-by-block.
+ *
+ * @name IAMap.traverseEntries
+ * @function
+ * @param {Object} rootBlock The root block, for extracting the IAMap configuration data
+ * @returns An {@link EntriesTraversal} object for performing the traversal block-by-block and collecting their
+ * entries.
+ */
+function traverseEntries (rootBlock) {
+  return new EntriesTraversal(rootBlock)
+}
+
+// utility for IAMap#keys(), IAMap#values() and IAMap#entries()
+async function * traverseKV (root, type) {
+  let traversal = new EntriesTraversal(root, root.depth)
+
+  while (true) {
+    yield * traversal[type]()
+    let id = traversal.traverse()
+    if (!id) {
+      break
+    }
+    let child = await root.store.load(id)
+    traversal.next(child)
   }
 }
 
@@ -897,7 +1036,8 @@ function hasher (map) {
 module.exports.create = create
 module.exports.load = load
 module.exports.registerHasher = registerHasher
-module.exports.traverse = traverse
+module.exports.traverseGet = traverseGet
+module.exports.traverseEntries = traverseEntries
 module.exports.fromSerializable = fromSerializable
 module.exports.isSerializable = isSerializable
 module.exports.isRootSerializable = isRootSerializable

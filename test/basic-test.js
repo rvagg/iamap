@@ -495,30 +495,72 @@ test('test keys, values, entries', async (t) => {
   t.strictEqual(idCount, 7) // 7 nodes deep
 })
 
-test('test non-store, sync block-by-block traversal', async (t) => {
+test('test non-store, sync block-by-block get traversal', async (t) => {
   const store = memoryStore()
   function isEqual (cid1, cid2) { return cid1.equals(cid2) }
-  // use the identity hash from the predictable fill test(s) to spread things out a bit
   let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
-  map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
-  t.strictEqual(await map.size(), 1)
-  map = await map.set(Buffer.from([ k, k, k, 2 ]), 'pos2+2')
-  t.strictEqual(await map.size(), 2)
-  map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
-  t.strictEqual(await map.size(), 3)
-  let deepKey = Buffer.from([ k, k, 0, 0 ])
+  map = await map.set(Buffer.from([ k, k, 1 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, 2 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, 3 ]), 'pos2+3')
+  let deepKey = Buffer.from([ k, k, 0 ])
   map = await map.set(deepKey, 'pos2+0+0')
-  t.strictEqual(await map.size(), 4)
   let rootBlock = store.load(map.id)
 
   let currentBlock = rootBlock
+  let traversal = IAMap.traverseGet(rootBlock, deepKey, isEqual)
+
   for (let i = 0; i < 4; i++) {
-    let traversal = IAMap.traverse(rootBlock, currentBlock, i, deepKey, isEqual)
     let expectedChildId = currentBlock.data[0].link
-    t.strictDeepEqual(traversal, { value: null, nextId: expectedChildId })
+    t.strictDeepEqual(traversal.traverse(), expectedChildId)
+    t.strictEqual(traversal.value(), null)
     currentBlock = store.load(expectedChildId)
+    traversal.next(currentBlock)
   }
-  let traversal = IAMap.traverse(rootBlock, currentBlock, 4, deepKey, isEqual)
-  t.strictDeepEqual(traversal, { value: 'pos2+0+0', nextId: null })
+
+  t.strictDeepEqual(traversal.traverse(), null)
+  t.strictEqual(traversal.value(), 'pos2+0+0')
+})
+
+test('test non-store, sync block-by-block keys traversal', async (t) => {
+  const store = memoryStore()
+  let map = await IAMap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+  let k = (2 << 4) | 2
+  map = await map.set(Buffer.from([ k, k, 1 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, 2 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, 0 ]), 'pos2+0')
+  let rootBlock = store.load(map.id)
+  let currentBlock = rootBlock
+
+  let traversal = IAMap.traverseEntries(rootBlock)
+
+  for (let i = 0; i < 4; i++) {
+    t.strictDeepEqual([...traversal.keys()], [])
+    t.strictDeepEqual([...traversal.values()], [])
+    t.strictDeepEqual([...traversal.entries()], [])
+    let id = traversal.traverse()
+    t.strictDeepEqual(id, currentBlock.data[0].link)
+    currentBlock = store.load(id)
+    traversal.next(currentBlock)
+  }
+
+  t.strictDeepEqual(
+    [...traversal.keys()],
+    [ Buffer.from([ k, k, 0 ]), Buffer.from([ k, k, 1 ]), Buffer.from([ k, k, 2 ]), Buffer.from([ k, k, 3 ]) ])
+  t.strictDeepEqual(
+    [...traversal.values()],
+    [ 'pos2+0', 'pos2+1', 'pos2+2', 'pos2+3' ])
+  t.strictDeepEqual(
+    [...traversal.entries()],
+    [ { key: Buffer.from([ k, k, 0 ]), value: 'pos2+0' },
+      { key: Buffer.from([ k, k, 1 ]), value: 'pos2+1' },
+      { key: Buffer.from([ k, k, 2 ]), value: 'pos2+2' },
+      { key: Buffer.from([ k, k, 3 ]), value: 'pos2+3' } ])
+
+  t.strictDeepEqual(traversal.traverse(), null)
+
+  t.strictDeepEqual([...traversal.keys()], [])
+  t.strictDeepEqual([...traversal.values()], [])
+  t.strictDeepEqual([...traversal.entries()], [])
 })
