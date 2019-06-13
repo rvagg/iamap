@@ -711,8 +711,8 @@ function buildConfig (options) {
   ro(config, 'hashAlg', options.hashAlg)
 
   if (typeof options.bitWidth === 'number') {
-    if (options.bitWidth <= 1 || options.bitWidth > 8) {
-      throw new TypeError('Invalid `bitWidth` option')
+    if (options.bitWidth < 3 || options.bitWidth > 8) {
+      throw new TypeError('Invalid `bitWidth` option, must be between 3 and 8')
     }
     ro(config, 'bitWidth', options.bitWidth)
   } else if (options.bitWidth !== undefined) {
