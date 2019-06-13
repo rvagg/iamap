@@ -163,8 +163,9 @@ Element.fromSerializable = function (obj) {
  * @property {number} config.bitWidth - The number of bits used at each level of this `IAMap`. See {@link iamap.create}
  * for more details.
  * @property {number} config.bucketSize - TThe maximum number of collisions acceptable at each level of the Map.
- * @property {number} [map=0] - Bitmap indicating which slots are occupied by data entries or child node links,
- * each data entry contains an bucket of entries.
+ * @property {Buffer} [map=Buffer] - Bitmap indicating which slots are occupied by data entries or child node links,
+ * each data entry contains an bucket of entries. Must be the appropriate size for `config.bitWidth`
+ * (`2 ** config.bitWith / 8` bytes).
  * @property {number} [depth=0] - Depth of the current node in the IAMap, `depth` is used to extract bits from the
  * key hashes to locate slots
  * @property {Array} [data=[]] - Array of data elements (an internal `Element` type), each of which contains a
@@ -189,10 +190,14 @@ class IAMap {
 
     let hashBytes = hasherRegistry[options.hashAlg].hashBytes
 
-    if (map !== undefined && typeof map !== 'number') {
-      throw new TypeError('`map` must be a Number')
+    if (map !== undefined && !Buffer.isBuffer(map)) {
+      throw new TypeError('`map` must be a Buffer')
     }
-    ro(this, 'map', map || 0)
+    let mapLength = Math.ceil(Math.pow(2, this.config.bitWidth) / 8)
+    if (map !== undefined && map.length !== mapLength) {
+      throw new Error('`map` must be a Buffer of length ' + mapLength)
+    }
+    ro(this, 'map', map || Buffer.alloc(mapLength))
 
     if (depth !== undefined && (!Number.isInteger(depth) || depth < 0)) {
       throw new TypeError('`depth` must be an integer >= 0')
@@ -450,6 +455,7 @@ class IAMap {
    * root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
    * For content addressable backing stores, it is expected that the same data in this serialisable form will always produce
    * the same identifier.
+   * Note that the `map` property is a `Buffer` so will need special handling for some serialization forms (e.g. JSON).
    *
    * Root node form:
    * ```
@@ -457,7 +463,7 @@ class IAMap {
    *   hashAlg: string
    *   bitWidth: number
    *   bucketSize: number
-   *   map: number
+   *   map: Buffer
    *   data: Array
    * }
    * ```
@@ -465,7 +471,7 @@ class IAMap {
    * Intermediate and leaf node form:
    * ```
    * {
-   *   map: number
+   *   map: Buffer
    *   data: Array
    * }
    * ```
@@ -617,7 +623,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
 
 // overflow of a bucket means it has to be replaced with a child node, tricky surgery
 async function replaceBucketWithNode (node, bitpos, elementAt) {
-  let newNode = new IAMap(node.store, node.config, 0, node.depth + 1)
+  let newNode = new IAMap(node.store, node.config, undefined, node.depth + 1)
   let element = node.data[elementAt]
   assert(element)
   assert(element.bucket)
@@ -643,7 +649,7 @@ async function updateNode (node, elementAt, key, newChild) {
 // bucket; used for collapsing a node and sending it upward
 function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
-  let newMap = setBit(0, mask(hash, 0, node.config.bitWidth), 1)
+  let newMap = setBit(Buffer.alloc(node.map.length), mask(hash, 0, node.config.bitWidth), 1)
   let newBucket = node.data.reduce((p, c, i) => {
     if (i === elementAt) {
       if (c.bucket.length === 1) { // only element in bucket, skip it
@@ -975,7 +981,7 @@ function isRootSerializable (serializable) {
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
 function isSerializable (serializable) {
-  return Array.isArray(serializable.data) && typeof serializable.map === 'number'
+  return Array.isArray(serializable.data) && Buffer.isBuffer(serializable.map)
 }
 
 /**
