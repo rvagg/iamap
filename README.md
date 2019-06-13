@@ -212,8 +212,9 @@ The `IAMap` constructor should not be used directly. Use `iamap.create()` or `ia
   * **`config.bitWidth`** _(`number`)_: The number of bits used at each level of this `IAMap`. See [`iamap.create`](#iamap__create)
     for more details.
   * **`config.bucketSize`** _(`number`)_: TThe maximum number of collisions acceptable at each level of the Map.
-* **`map`** _(`number`, optional, default=`0`)_: Bitmap indicating which slots are occupied by data entries or child node links,
-  each data entry contains an bucket of entries.
+* **`map`** _(`Buffer`, optional, default=`Buffer`)_: Bitmap indicating which slots are occupied by data entries or child node links,
+  each data entry contains an bucket of entries. Must be the appropriate size for `config.bitWidth`
+  (`2 ** config.bitWith / 8` bytes).
 * **`depth`** _(`number`, optional, default=`0`)_: Depth of the current node in the IAMap, `depth` is used to extract bits from the
   key hashes to locate slots
 * **`data`** _(`Array`, optional, default=`[]`)_: Array of data elements (an internal `Element` type), each of which contains a
@@ -328,6 +329,7 @@ The backing store can use this representation to create a suitable serialised fo
 root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
 For content addressable backing stores, it is expected that the same data in this serialisable form will always produce
 the same identifier.
+Note that the `map` property is a `Buffer` so will need special handling for some serialization forms (e.g. JSON).
 
 Root node form:
 ```
@@ -335,7 +337,7 @@ Root node form:
   hashAlg: string
   bitWidth: number
   bucketSize: number
-  map: number
+  map: Buffer
   data: Array
 }
 ```
@@ -343,7 +345,7 @@ Root node form:
 Intermediate and leaf node form:
 ```
 {
-  map: number
+  map: Buffer
   data: Array
 }
 ```
