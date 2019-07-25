@@ -19,9 +19,9 @@ test(`fill with ${PEAK}`, async (t) => {
 
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 5,
-    bucketSize: 8,
-    map: Buffer.alloc(2 ** 5 / 8),
+    bitWidth: 8,
+    bucketSize: 5,
+    map: Buffer.alloc((2 ** 8) / 8),
     data: []
   })
   t.strictEqual(store.map.size, 1)
