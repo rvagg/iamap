@@ -1,16 +1,9 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
-const assert = require('assert')
+const bitSequence = require('bit-sequence')
 
-// mask off `nbits` bits at `depth` position of `hash` where `hash` is a UInt8Array-like
 function mask (hash, depth, nbits) {
-  assert(Array.isArray(hash) || Buffer.isBuffer(hash))
-  let index = Math.floor((depth * nbits) / 8)
-  let shift = (depth * nbits) % 8
-  let lowBits = Math.min(nbits, 8 - shift)
-  let hiBits = nbits - lowBits
-  return ((hash[index] >> shift) & ((1 << lowBits) - 1)) |
-    ((hash[index + 1] & ((1 << hiBits) - 1)) << lowBits)
+  return bitSequence(hash, depth * nbits, nbits)
 }
 
 // set the `position` bit in the given `bitmap` to be `set` (truthy=1, falsey=0)

@@ -1,3 +1,4 @@
+
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
 const assert = require('assert')
@@ -272,7 +273,7 @@ class IAMap {
    * @param {string|array|Buffer|ArrayBuffer} key - A key for the value being sought. See {@link IAMap#set} for
    * details about acceptable `key` types.
    * @returns {Promise} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
-   * key is not found in this `IAMap`, the `Promise` will resolve to `null`.
+   * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
    * @async
    */
   async get (key) {
@@ -298,7 +299,7 @@ class IAMap {
    * @async
    */
   async has (key) {
-    return (await this.get(key)) !== null
+    return (await this.get(key)) !== undefined
   }
 
   /**
@@ -759,7 +760,7 @@ class GetTraversal {
     this._hash = hasherRegistry[this._config.hashAlg].hasher(this._key)
     assert(Buffer.isBuffer(this._hash))
     this._node = isIAMap ? rootBlock : fromSerializable(this._store, 0, rootBlock, rootBlock, depth)
-    this._value = null
+    this._value = undefined
   }
 
   /**
@@ -795,7 +796,7 @@ class GetTraversal {
   /**
    * Get the final value of the traversal, if one has been found.
    *
-   * @returns A value, if one has been found, otherwise `null` (if one has not been found or we are mid-traversal)
+   * @returns A value, if one has been found, otherwise `undefined` (if one has not been found or we are mid-traversal)
    */
   value () {
     return this._value
@@ -810,7 +811,7 @@ class GetTraversal {
  * @name iamap.traverseGet
  * @function
  * @param {Object} rootBlock The root block, for extracting the IAMap configuration data
- * @param {string|array|Buffer|ArrayBuffer} key - A key to remove. See {@link IAMap#set} for details about
+ * @param {string|array|Buffer|ArrayBuffer} key a key to get. See {@link IAMap#get} for details about
  * acceptable `key` types.
  * @param {function} isEqual A function that compares two identifiers in the data store. See
  * {@link iamap.create} for details on the backing store and the requirements of an `isEqual()` function.

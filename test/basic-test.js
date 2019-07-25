@@ -31,7 +31,7 @@ test('test basic set/get', async (t) => {
   const newMap = await map.set('foo', 'bar')
 
   t.strictEqual(await newMap.get('foo'), 'bar')
-  t.strictEqual(await map.get('foo'), null)
+  t.strictEqual(await map.get('foo'), undefined)
   t.strictEqual(await newMap.has('foo'), true)
   t.strictEqual(await map.has('nope'), false)
   t.strictEqual(await map.has('foo'), false)
@@ -69,7 +69,7 @@ test('test basic set/set-same/get', async (t) => {
   const newMap2 = await newMap1.set('foo', 'bar')
 
   t.strictEqual(await newMap1.get('foo'), 'bar')
-  t.strictEqual(await map.get('foo'), null)
+  t.strictEqual(await map.get('foo'), undefined)
   t.strictEqual(newMap1, newMap2) // identity match, should be the same object
 
   // original map isn't mutated
@@ -108,7 +108,7 @@ test('test basic set/update/get', async (t) => {
 
   t.strictEqual(await newMap1.get('foo'), 'bar')
   t.strictEqual(await newMap2.get('foo'), 'baz')
-  t.strictEqual(await map.get('foo'), null)
+  t.strictEqual(await map.get('foo'), undefined)
   t.notStrictEqual(newMap1, newMap2) // identity not match
 
   // original map isn't mutated
@@ -153,9 +153,9 @@ test('test basic set/get/delete', async (t) => {
   const setMap = await map.set('foo', 'bar')
   const deleteMap = await setMap.delete('foo')
 
-  t.strictEqual(await deleteMap.get('foo'), null)
+  t.strictEqual(await deleteMap.get('foo'), undefined)
   t.strictEqual(await setMap.get('foo'), 'bar')
-  t.strictEqual(await map.get('foo'), null)
+  t.strictEqual(await map.get('foo'), undefined)
   t.strictEqual(await setMap.delete('nope'), setMap) // identity match, same map returned
 
   // original map isn't mutated
@@ -188,17 +188,25 @@ test('test basic set/get/delete', async (t) => {
   t.strictEqual(await deleteMap.isInvariant(), true)
 })
 
+/*
+ * NOTE ABOUT IDENTITY HASH TESTS
+ * With identity hashes we can control the index at each level but we have to construct the
+ * key carefully. If we choose a bitWidth of 4, that's 2 halves of an 8 bit number, so we
+ * can put together 2 depth indexes by shifting the first one to the left by 4 bits and adding
+ * the second to it. So `5 << 4 | 2` sets up a 2 indexes, 5 and 2, represented in 4 bits each.
+ */
+
 test('test predictable single level fill', async (t) => {
   const store = memoryStore()
   let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 3 })
   // bitWidth of 4 yields 16 buckets, we can use 'identity' hash to feed keys that we know
   // will go into certain slots
   for (let i = 0; i < 16; i++) {
-    map = await map.set(Buffer.from([ i, 0 ]), `value0x${i}`)
+    map = await map.set(Buffer.from([ i << 4, 0 ]), `value0x${i}`)
   }
 
   for (let i = 0; i < 16; i++) {
-    t.strictEqual(await map.get(Buffer.from([ i, 0 ])), `value0x${i}`)
+    t.strictEqual(await map.get(Buffer.from([ i << 4, 0 ])), `value0x${i}`)
   }
 
   // inspect internals
@@ -212,13 +220,13 @@ test('test predictable single level fill', async (t) => {
 
   // fill it right up
   for (let i = 0; i < 16; i++) {
-    map = await map.set(Buffer.from([ i, 1 ]), `value1x${i}`)
-    map = await map.set(Buffer.from([ i, 2 ]), `value2x${i}`)
+    map = await map.set(Buffer.from([ i << 4, 1 ]), `value1x${i}`)
+    map = await map.set(Buffer.from([ i << 4, 2 ]), `value2x${i}`)
   }
 
   for (let i = 0; i < 16; i++) {
     for (let j = 0; j < 3; j++) {
-      t.strictEqual(await map.get(Buffer.from([ i, j ])), `value${j}x${i}`)
+      t.strictEqual(await map.get(Buffer.from([ i << 4, j ])), `value${j}x${i}`)
     }
   }
 
@@ -243,14 +251,14 @@ test('test predictable fill vertical and collapse', async (t) => {
   // an 8-bit value with `2` in each of the 4-bit halves, for a `bitWidth` of 4 we are going to collide at
   // the position `2` of each level that we provide it
 
-  map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
-  map = await map.set(Buffer.from([ k, k, k, 2 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, k, 1 << 4 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, k, 2 << 4 ]), 'pos2+2')
 
   // check that we have filled our first level, even though we asked for position 2, `data` is compressed so it still
   // only has one element
   async function validateBaseForm (map) {
-    t.strictEqual(await map.get(Buffer.from([ k, k, k, 1 ])), 'pos2+1')
-    t.strictEqual(await map.get(Buffer.from([ k, k, k, 2 ])), 'pos2+2')
+    t.strictEqual(await map.get(Buffer.from([ k, k, k, 1 << 4 ])), 'pos2+1')
+    t.strictEqual(await map.get(Buffer.from([ k, k, k, 2 << 4 ])), 'pos2+2')
 
     t.strictEqual(map.map.toString('hex'), Buffer.from([ 0b100, 0 ]).toString('hex')) // data at position 2 but not 1 or 0
     t.strictEqual(map.data.length, 1)
@@ -267,7 +275,7 @@ test('test predictable fill vertical and collapse', async (t) => {
 
   // the more we push in with `k` the more we collide and force creation of child nodes to contain them
 
-  map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, k, 3 << 4 ]), 'pos2+3')
 
   t.strictEqual(map.map.toString('hex'), Buffer.from([ 0b100, 0 ]).toString('hex')) // position 2
   t.strictEqual(map.data.length, 1)
@@ -299,22 +307,22 @@ test('test predictable fill vertical and collapse', async (t) => {
   t.strictEqual(await map.size(), 3)
 
   // while we have a deep tree, let's test a delete for a missing element at a known deep node
-  t.strictEqual(await map.delete(Buffer.from([ k, k, k, 4 ])), map)
+  t.strictEqual(await map.delete(Buffer.from([ k, k, k, 4 << 4 ])), map)
 
   // delete 'pos2+3' and we should be back where we started with just the two at the top level in the same bucket
-  map = await map.delete(Buffer.from([ k, k, k, 3 ]))
+  map = await map.delete(Buffer.from([ k, k, k, 3 << 4 ]))
   await validateBaseForm(map)
 
   // put the awkward one back to re-create the 7-node depth
-  map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, k, 3 << 4 ]), 'pos2+3')
   // put one at level 5 so we don't collapse all the way
   map = await map.set(Buffer.from([ k, k, 0, 0 ]), 'pos2+0+0')
   t.strictEqual(await map.size(), 4)
   // delete awkward 3rd
-  map = await map.delete(Buffer.from([ k, k, k, 3 ]))
+  map = await map.delete(Buffer.from([ k, k, k, 3 << 4 ]))
 
-  t.strictEqual(await map.get(Buffer.from([ k, k, k, 1 ])), 'pos2+1')
-  t.strictEqual(await map.get(Buffer.from([ k, k, k, 2 ])), 'pos2+2')
+  t.strictEqual(await map.get(Buffer.from([ k, k, k, 1 << 4 ])), 'pos2+1')
+  t.strictEqual(await map.get(Buffer.from([ k, k, k, 2 << 4 ])), 'pos2+2')
   t.strictEqual(await map.get(Buffer.from([ k, k, 0, 0 ])), 'pos2+0+0')
 
   t.strictEqual(await map.size(), 3)
@@ -351,13 +359,13 @@ test('test predictable fill vertical, switched delete', async (t) => {
   let map = await iamap.create(store, options)
   let k = (2 << 4) | 2
   // 3 entries at the lowest node, one part way back up, like last test
-  map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
-  map = await map.set(Buffer.from([ k, k, k, 2 ]), 'pos2+2')
-  map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, k, 1 << 4 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, k, 2 << 4 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, k, 3 << 4 ]), 'pos2+3')
   map = await map.set(Buffer.from([ k, k, 0, 0 ]), 'pos2+0+0')
 
   // now delete one of the lowest to force a different tree form at the mid level
-  map = await map.delete(Buffer.from([ k, k, k, 2 ]))
+  map = await map.delete(Buffer.from([ k, k, k, 2 << 4 ]))
 
   let child = map
   // 4 levels should be the same
@@ -397,17 +405,18 @@ test('test predictable fill vertical, larger buckets', async (t) => {
   // removing one of the 4 should collapse that node up into the parent node, but no further
   // because there will be >4 thanks to the last 4 in this list
   map = await map.set(Buffer.from([ k, (1 << 4) | 1, 0 ]), 'pos6+1+1')
-  map = await map.set(Buffer.from([ k, (1 << 4) | 1, 1 ]), 'pos6+1+2')
-  map = await map.set(Buffer.from([ k, (1 << 4) | 1, 2 ]), 'pos6+1+3')
-  map = await map.set(Buffer.from([ k, (1 << 4) | 1, 3 ]), 'pos6+1+4')
-  map = await map.set(Buffer.from([ k, (2 << 4) | 1, 5 ]), 'pos6+1+5')
-  map = await map.set(Buffer.from([ k, 2 ]), 'pos6+2')
-  map = await map.set(Buffer.from([ k, 3 ]), 'pos6+3')
-  map = await map.set(Buffer.from([ k, 4 ]), 'pos6+4')
-  map = await map.set(Buffer.from([ k, 5 ]), 'pos6+5')
+  const pos612key = Buffer.from([ k, (1 << 4) | 1, 1 << 4 ])
+  map = await map.set(pos612key, 'pos6+1+2')
+  map = await map.set(Buffer.from([ k, (1 << 4) | 1, 2 << 4 ]), 'pos6+1+3')
+  map = await map.set(Buffer.from([ k, (1 << 4) | 1, 3 << 4 ]), 'pos6+1+4')
+  map = await map.set(Buffer.from([ k, (1 << 4) | 2, 5 << 4 ]), 'pos6+1+5')
+  map = await map.set(Buffer.from([ k, 2 << 4 ]), 'pos6+2')
+  map = await map.set(Buffer.from([ k, 3 << 4 ]), 'pos6+3')
+  map = await map.set(Buffer.from([ k, 4 << 4 ]), 'pos6+4')
+  map = await map.set(Buffer.from([ k, 5 << 4 ]), 'pos6+5')
 
   // now delete one of the lowest to force a different tree form at the mid level
-  map = await map.delete(Buffer.from([ k, (1 << 4) | 1, 1 ]))
+  map = await map.delete(pos612key)
 
   let child = map
   // 4 levels should be the same
@@ -450,13 +459,13 @@ test('test keys, values, entries', async (t) => {
   let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
   let ids = []
-  map = await map.set(Buffer.from([ k, k, k, 1 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, k, 1 << 4 ]), 'pos2+1')
   ids.push(map.id)
   t.strictEqual(await map.size(), 1)
-  map = await map.set(Buffer.from([ k, k, k, 2 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, k, 2 << 4 ]), 'pos2+2')
   ids.push(map.id)
   t.strictEqual(await map.size(), 2)
-  map = await map.set(Buffer.from([ k, k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, k, 3 << 4 ]), 'pos2+3')
   ids.push(map.id)
   t.strictEqual(await map.size(), 3)
   map = await map.set(Buffer.from([ k, k, 0, 0 ]), 'pos2+0+0')
@@ -464,7 +473,7 @@ test('test keys, values, entries', async (t) => {
   t.strictEqual(await map.size(), 4)
 
   // you can't normally know the order but in this case it's predictable cause we control the hash
-  let expectedKeys = [ '22220000', '22222201', '22222202', '22222203' ]
+  let expectedKeys = [ '22220000', '22222210', '22222220', '22222230' ]
   let expectedValues = [ 'pos2+0+0', 'pos2+1', 'pos2+2', 'pos2+3' ]
   let expectedEntries = expectedKeys.map((k, i) => { return { key: Buffer.from(k, 'hex'), value: expectedValues[i] } })
 
@@ -500,9 +509,9 @@ test('test non-store, sync block-by-block get traversal', async (t) => {
   function isEqual (cid1, cid2) { return cid1.equals(cid2) }
   let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
-  map = await map.set(Buffer.from([ k, k, 1 ]), 'pos2+1')
-  map = await map.set(Buffer.from([ k, k, 2 ]), 'pos2+2')
-  map = await map.set(Buffer.from([ k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, 1 << 4 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, 2 << 4 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, 3 << 4 ]), 'pos2+3')
   let deepKey = Buffer.from([ k, k, 0 ])
   map = await map.set(deepKey, 'pos2+0+0')
   let rootBlock = store.load(map.id)
@@ -513,7 +522,7 @@ test('test non-store, sync block-by-block get traversal', async (t) => {
   for (let i = 0; i < 4; i++) {
     let expectedChildId = currentBlock.data[0].link
     t.strictDeepEqual(traversal.traverse(), expectedChildId)
-    t.strictEqual(traversal.value(), null)
+    t.strictEqual(traversal.value(), undefined)
     currentBlock = store.load(expectedChildId)
     traversal.next(currentBlock)
   }
@@ -526,9 +535,9 @@ test('test non-store, sync block-by-block keys traversal', async (t) => {
   const store = memoryStore()
   let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   let k = (2 << 4) | 2
-  map = await map.set(Buffer.from([ k, k, 1 ]), 'pos2+1')
-  map = await map.set(Buffer.from([ k, k, 2 ]), 'pos2+2')
-  map = await map.set(Buffer.from([ k, k, 3 ]), 'pos2+3')
+  map = await map.set(Buffer.from([ k, k, 1 << 4 ]), 'pos2+1')
+  map = await map.set(Buffer.from([ k, k, 2 << 4 ]), 'pos2+2')
+  map = await map.set(Buffer.from([ k, k, 3 << 4 ]), 'pos2+3')
   map = await map.set(Buffer.from([ k, k, 0 ]), 'pos2+0')
   let rootBlock = store.load(map.id)
   let currentBlock = rootBlock
@@ -547,16 +556,16 @@ test('test non-store, sync block-by-block keys traversal', async (t) => {
 
   t.strictDeepEqual(
     [...traversal.keys()],
-    [ Buffer.from([ k, k, 0 ]), Buffer.from([ k, k, 1 ]), Buffer.from([ k, k, 2 ]), Buffer.from([ k, k, 3 ]) ])
+    [ Buffer.from([ k, k, 0 ]), Buffer.from([ k, k, 1 << 4 ]), Buffer.from([ k, k, 2 << 4 ]), Buffer.from([ k, k, 3 << 4 ]) ])
   t.strictDeepEqual(
     [...traversal.values()],
     [ 'pos2+0', 'pos2+1', 'pos2+2', 'pos2+3' ])
   t.strictDeepEqual(
     [...traversal.entries()],
     [ { key: Buffer.from([ k, k, 0 ]), value: 'pos2+0' },
-      { key: Buffer.from([ k, k, 1 ]), value: 'pos2+1' },
-      { key: Buffer.from([ k, k, 2 ]), value: 'pos2+2' },
-      { key: Buffer.from([ k, k, 3 ]), value: 'pos2+3' } ])
+      { key: Buffer.from([ k, k, 1 << 4 ]), value: 'pos2+1' },
+      { key: Buffer.from([ k, k, 2 << 4 ]), value: 'pos2+2' },
+      { key: Buffer.from([ k, k, 3 << 4 ]), value: 'pos2+3' } ])
 
   t.strictDeepEqual(traversal.traverse(), null)
 

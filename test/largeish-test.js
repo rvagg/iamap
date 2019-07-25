@@ -34,7 +34,7 @@ test(`fill with ${PEAK}`, async (t) => {
   t.strictEqual(await map.isInvariant(), true)
   t.strictEqual(await map.get('foo'), 'bar')
   t.strictEqual(await map.get('bar'), 'baz')
-  t.strictEqual(await map.get('boom'), null)
+  t.strictEqual(await map.get('boom'), undefined)
 
   map = await map.set('bar', 'baz') // repeat
   t.strictEqual(await map.get('bar'), 'baz')
@@ -96,7 +96,7 @@ test(`load ${PEAK} node map and empty it`, async (t) => {
   t.strictEqual(await map.get('foo'), 'bar')
   t.strictEqual(await map.get('bar'), 'booz')
   map = await map.delete('foo')
-  t.strictEqual(await map.get('foo'), null)
+  t.strictEqual(await map.get('foo'), undefined)
   t.strictEqual(await map.get('bar'), 'booz')
   map = await map.delete('bar')
   t.ok(!await map.get('bar'))
@@ -105,7 +105,7 @@ test(`load ${PEAK} node map and empty it`, async (t) => {
   for (let i = 0; i < shuffledKeys.length; i++) {
     let key = shuffledKeys[i]
     map = await map.delete(key)
-    t.strictEqual(await map.get(key), null)
+    t.strictEqual(await map.get(key), undefined)
     for (let j = i + 1; j < shuffledKeys.length; j++) { // make sure the rest are still there
       let key = shuffledKeys[j]
       let value = key.replace(/^k/, 'v')

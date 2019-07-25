@@ -11,12 +11,13 @@
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
   "license": "Apache-2.0",
   "dependencies": {
-    "multicodec": "~0.5.3"
+    "bit-sequence": "~1.0.0",
+    "multicodec": "~0.5.4"
   },
   "devDependencies": {
     "jsdoc4readme": "~1.1.2",
     "murmurhash3js-revisited": "~3.0.0",
-    "tap": "~14.2.0"
+    "tap": "~14.4.3"
   },
   "repository": {
     "type": "git",
