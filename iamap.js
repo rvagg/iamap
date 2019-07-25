@@ -8,8 +8,8 @@ const multicodec = {
   names: require('multicodec/src/name-table')
 }
 
-const defaultBitWidth = 5 // 2^5 = 32 buckets per node
-const defaultBucketSize = 8 // array size for a bucket of values
+const defaultBitWidth = 8 // 2^8 = 256 buckets or children per node
+const defaultBucketSize = 5 // array size for a bucket of values
 
 const hasherRegistry = {}
 
@@ -34,13 +34,13 @@ const hasherRegistry = {}
  * @param {Object} options - Options for this IAMap
  * @param {string} options.hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
  * hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with {@link iamap.registerHasher}.
- * @param {number} [options.bitWidth=5] - The number of bits to extract from the hash to form a data element index at
+ * @param {number} [options.bitWidth=8] - The number of bits to extract from the hash to form a data element index at
  * each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
  * each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
  * determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
  * produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
  * currently allowed is `8` which will store 256 data elements in each node.
- * @param {number} [options.bucketSize=8] - The maximum number of collisions acceptable at each level of the Map. A
+ * @param {number} [options.bucketSize=5] - The maximum number of collisions acceptable at each level of the Map. A
  * collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
  * bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
  * pushed
@@ -718,8 +718,8 @@ function buildConfig (options) {
   ro(config, 'hashAlg', options.hashAlg)
 
   if (typeof options.bitWidth === 'number') {
-    if (options.bitWidth < 3 || options.bitWidth > 8) {
-      throw new TypeError('Invalid `bitWidth` option, must be between 3 and 8')
+    if (options.bitWidth < 3 || options.bitWidth > 16) {
+      throw new TypeError('Invalid `bitWidth` option, must be between 3 and 16')
     }
     ro(config, 'bitWidth', options.bitWidth)
   } else if (options.bitWidth !== undefined) {

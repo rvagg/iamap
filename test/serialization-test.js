@@ -14,9 +14,9 @@ test('empty object', async (t) => {
   const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const emptySerialized = {
     hashAlg: 'murmur3-32',
-    bitWidth: 5,
-    bucketSize: 8,
-    map: Buffer.alloc(2 ** 5 / 8),
+    bitWidth: 8,
+    bucketSize: 5,
+    map: Buffer.alloc((2 ** 8) / 8),
     data: []
   }
 

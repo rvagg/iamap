@@ -153,13 +153,13 @@ resolves to a `IAMap` instance.
 * **`options`** _(`Object`)_: Options for this IAMap
   * **`options.hashAlg`** _(`string`)_: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
     hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
-  * **`options.bitWidth`** _(`number`, optional, default=`5`)_: The number of bits to extract from the hash to form a data element index at
+  * **`options.bitWidth`** _(`number`, optional, default=`8`)_: The number of bits to extract from the hash to form a data element index at
     each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
     each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
     determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
     produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
     currently allowed is `8` which will store 256 data elements in each node.
-  * **`options.bucketSize`** _(`number`, optional, default=`8`)_: The maximum number of collisions acceptable at each level of the Map. A
+  * **`options.bucketSize`** _(`number`, optional, default=`5`)_: The maximum number of collisions acceptable at each level of the Map. A
     collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
     bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
     pushed
@@ -247,7 +247,7 @@ Asynchronously find and return a value for the given `key` if it exists within t
   details about acceptable `key` types.
 
 **Return value**  _(`Promise`)_: A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
-  key is not found in this `IAMap`, the `Promise` will resolve to `null`.
+  key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
 
 <a name="IAMap_has"></a>
 ### `async IAMap#has(key)`
@@ -429,7 +429,7 @@ Provide the next block required for traversal.
 
 Get the final value of the traversal, if one has been found.
 
-**Return value** : A value, if one has been found, otherwise `null` (if one has not been found or we are mid-traversal)
+**Return value** : A value, if one has been found, otherwise `undefined` (if one has not been found or we are mid-traversal)
 
 <a name="iamap__traverseGet"></a>
 ### `iamap.traverseGet(rootBlock, key, isEqual)`
@@ -441,7 +441,7 @@ traversals block-by-block.
 **Parameters:**
 
 * **`rootBlock`** _(`Object`)_: The root block, for extracting the IAMap configuration data
-* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
+* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: a key to get. See [`IAMap#get`](#IAMap_get) for details about
   acceptable `key` types.
 * **`isEqual`** _(`function`)_: A function that compares two identifiers in the data store. See
   [`iamap.create`](#iamap__create) for details on the backing store and the requirements of an `isEqual()` function.
