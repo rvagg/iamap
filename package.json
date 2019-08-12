@@ -12,12 +12,12 @@
   "license": "Apache-2.0",
   "dependencies": {
     "bit-sequence": "~1.0.0",
-    "multicodec": "~0.5.4"
+    "multicodec": "~0.5.5"
   },
   "devDependencies": {
-    "jsdoc4readme": "~1.1.2",
+    "jsdoc4readme": "^1.2.1",
     "murmurhash3js-revisited": "~3.0.0",
-    "tap": "~14.4.3"
+    "tap": "~14.6.1"
   },
   "repository": {
     "type": "git",
