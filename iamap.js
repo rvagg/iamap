@@ -28,9 +28,17 @@ const hasherRegistry = {}
  * form of a single node of a IAMap which is provided as a plain object representation. `store.save(node)` takes
  * a serialisable node and should return a content address / ID for the node. `store.load(id)` serves the inverse
  * purpose, taking a content address / ID as provided by a `save()` operation and returning the serialised form
- * of a node which can be instantiated by IAMap. In addition, a `store.isEqual(id1, id2)` method is required to
- * check the equality of the two content addresses / IDs (which may be custom for that data type).
- * The `store` object should take the following form: `{ async save(node):id, async load(id):node, isEqual(id,id):boolean }`
+ * of a node which can be instantiated by IAMap. In addition, two identifier handling methods are needed:
+ * `store.isEqual(id1, id2)` is required to check the equality of the two content addresses / IDs
+ * (which may be custom for that data type). `store.isLink(obj)` is used to determine if an object is a link type
+ * that can be used for `load()` operations on the store. It is important that link types be different to standard
+ * JavaScript arrays and don't share properties used by the serialized form of an IAMap (e.g. such that a
+ * `typeof obj === 'object' && Array.isArray(obj.data)`) .This is because a node data element may either be a link to
+ * a child node, or an inlined child node, so `isLink()` should be able to determine if an object is a link, and if not,
+ * `Array.isArray(obj)` will determine if that data element is a bucket of elements, or the above object check be able
+ * to determine that an inline child node exists at the data element.
+ * The `store` object should take the following form:
+ * `{ async save(node):id, async load(id):node, isEqual(id,id):boolean, isLink(obj):boolean }`
  * @param {Object} options - Options for this IAMap
  * @param {string} options.hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
  * hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with {@link iamap.registerHasher}.
@@ -135,17 +143,17 @@ class Element {
         return c.toSerializable()
       })
     } else {
-      assert(!IAMap.isIAMap(this.link))
-      return { link: this.link }
+      assert(!IAMap.isIAMap(this.link)) // TODO: inline here
+      return this.link
     }
   }
 }
 
-Element.fromSerializable = function (obj) {
-  if (Array.isArray(obj)) {
+Element.fromSerializable = function (isLink, obj) {
+  if (isLink(obj)) {
+    return new Element(null, obj)
+  } else if (Array.isArray(obj)) {
     return new Element(obj.map(KV.fromSerializable))
-  } else if (obj && obj.link && Object.keys(obj).length === 1) {
-    return new Element(null, obj.link)
   } else {
     assert.fail('badly formed data element')
   }
@@ -181,6 +189,7 @@ class IAMap {
   constructor (store, options, map, depth, data) {
     if (!store || typeof store.save !== 'function' ||
         typeof store.load !== 'function' ||
+        typeof store.isLink !== 'function' ||
         typeof store.isEqual !== 'function') {
       throw new TypeError('Invalid `store` option, must be of type: { save(node):id, load(id):node, isEqual(id,id):boolean }')
     }
@@ -277,7 +286,7 @@ class IAMap {
    * @async
    */
   async get (key) {
-    const traversal = traverseGet(this, key, this.store.isEqual, this.depth)
+    const traversal = traverseGet(this, key, this.store.isEqual, this.store.isLink, this.depth)
     while (true) {
       const nextId = traversal.traverse()
       if (!nextId) {
@@ -481,8 +490,11 @@ class IAMap {
    *
    * * A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
    *   or whatever type has been provided in `set()` operations for this `IAMap`.
-   * * A link is an Object with a single key `'link'` whose value is of the type provided by the backing store in
-   *   `save()` operations.
+   * * A link is an object of the type that the backing store provides upon `save()` operations and can be identified
+   *   with `isLink()` calls.
+   *
+   * Buckets and links are differentiated by their "kind": a bucket is an array while a link is a "link" kind as dictated
+   * by the backing store. We use `Array.isArray()` and `store.isLink()` to perform this differentiation.
    *
    * @returns {Object} An object representing the internal state of this local `IAMap` node, including its links to child nodes
    * if any.
@@ -742,20 +754,20 @@ function buildConfig (options) {
 }
 
 /* istanbul ignore next */
-const dummyStore = { load () {}, save () {}, isEqual () { return false } }
+const dummyStore = { load () {}, save () {}, isEqual () { return false }, isLink () { return false } }
 
 /**
  * A `GetTraversal` object is returned by the {@link iamap.traverseGet} function for performing
  * block-by-block traversals on an IAMap.
  */
 class GetTraversal {
-  constructor (rootBlock, key, isEqual, depth) {
+  constructor (rootBlock, key, isEqual, isLink, depth) {
     const isIAMap = IAMap.isIAMap(rootBlock)
     this._config = isIAMap ? rootBlock.config : serializableToOptions(rootBlock)
     this._key = Buffer.isBuffer(key) ? key : Buffer.from(key)
     this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
 
-    this._store = Object.assign(dummyStore, { isEqual })
+    this._store = Object.assign(dummyStore, { isEqual, isLink })
     this._hash = hasherRegistry[this._config.hashAlg].hasher(this._key)
     assert(Buffer.isBuffer(this._hash))
     this._node = isIAMap ? rootBlock : fromSerializable(this._store, 0, rootBlock, rootBlock, depth)
@@ -814,10 +826,12 @@ class GetTraversal {
  * acceptable `key` types.
  * @param {function} isEqual A function that compares two identifiers in the data store. See
  * {@link iamap.create} for details on the backing store and the requirements of an `isEqual()` function.
+ * @param {function} isLink A function that can discern if an object is a link type used by the data store. See
+ * {@link iamap.create} for details on the backing store and the requirements of an `isLink()` function.
  * @returns A {@link GetTraversal} object for performing the traversal block-by-block.
  */
-function traverseGet (rootBlock, key, isEqual, depth) {
-  return new GetTraversal(rootBlock, key, isEqual, depth)
+function traverseGet (rootBlock, key, isEqual, isLink, depth) {
+  return new GetTraversal(rootBlock, key, isEqual, isLink, depth)
 }
 
 /**
@@ -1013,7 +1027,7 @@ function fromSerializable (store, id, serializable, options = null, depth = 0) {
     // don't use passed-in options
     options = serializableToOptions(serializable)
   }
-  const data = serializable.data.map(Element.fromSerializable)
+  const data = serializable.data.map(Element.fromSerializable.bind(null, store.isLink))
   const node = new IAMap(store, options, serializable.map, depth, data)
   if (id != null) {
     ro(node, 'id', id)

@@ -16,6 +16,9 @@ const devnull = {
   },
   isEqual (id1, id2) {
     return true
+  },
+  isLink (id) {
+    return true
   }
 }
 

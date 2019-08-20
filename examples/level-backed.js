@@ -97,6 +97,9 @@ const store = {
   // Equality test two identifiers, IAMap uses this and because save() returns CIDs we're comparing those
   isEqual: (id1, id2) => {
     return id1.equals(id2)
+  },
+  isLink (obj) {
+    return typeof obj === 'number'
   }
 }
 

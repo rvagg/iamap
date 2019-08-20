@@ -496,7 +496,8 @@ test('test keys, values, entries', async (t) => {
 
 test('test non-store, sync block-by-block get traversal', async (t) => {
   const store = memoryStore()
-  function isEqual (cid1, cid2) { return cid1.equals(cid2) }
+  function isEqual (id1, id2) { return id1.equals(id2) }
+  function isLink (link) { return typeof link === 'number' }
   let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
   const k = (2 << 4) | 2
   map = await map.set(Buffer.from([k, k, 1 << 4]), 'pos2+1')
@@ -507,10 +508,10 @@ test('test non-store, sync block-by-block get traversal', async (t) => {
   const rootBlock = store.load(map.id)
 
   let currentBlock = rootBlock
-  const traversal = iamap.traverseGet(rootBlock, deepKey, isEqual)
+  const traversal = iamap.traverseGet(rootBlock, deepKey, isEqual, isLink)
 
   for (let i = 0; i < 4; i++) {
-    const expectedChildId = currentBlock.data[0].link
+    const expectedChildId = currentBlock.data[0] // link
     t.strictDeepEqual(traversal.traverse(), expectedChildId)
     t.strictEqual(traversal.value(), undefined)
     currentBlock = store.load(expectedChildId)
@@ -539,7 +540,7 @@ test('test non-store, sync block-by-block keys traversal', async (t) => {
     t.strictDeepEqual([...traversal.values()], [])
     t.strictDeepEqual([...traversal.entries()], [])
     const id = traversal.traverse()
-    t.strictDeepEqual(id, currentBlock.data[0].link)
+    t.strictDeepEqual(id, currentBlock.data[0]) // a link
     currentBlock = store.load(id)
     traversal.next(currentBlock)
   }

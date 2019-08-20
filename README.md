@@ -119,7 +119,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`GetTraversal#traverse()`](#GetTraversal_traverse)
  * [`GetTraversal#next(block)`](#GetTraversal_next)
  * [`GetTraversal#value()`](#GetTraversal_value)
- * [`iamap.traverseGet(rootBlock, key, isEqual)`](#iamap__traverseGet)
+ * [`iamap.traverseGet(rootBlock, key, isEqual, isLink)`](#iamap__traverseGet)
  * [`class EntriesTraversal`](#EntriesTraversal)
  * [`EntriesTraversal#traverse()`](#EntriesTraversal_traverse)
  * [`EntriesTraversal#next(block)`](#EntriesTraversal_next)
@@ -147,9 +147,17 @@ resolves to a `IAMap` instance.
   form of a single node of a IAMap which is provided as a plain object representation. `store.save(node)` takes
   a serialisable node and should return a content address / ID for the node. `store.load(id)` serves the inverse
   purpose, taking a content address / ID as provided by a `save()` operation and returning the serialised form
-  of a node which can be instantiated by IAMap. In addition, a `store.isEqual(id1, id2)` method is required to
-  check the equality of the two content addresses / IDs (which may be custom for that data type).
-  The `store` object should take the following form: `{ async save(node):id, async load(id):node, isEqual(id,id):boolean }`
+  of a node which can be instantiated by IAMap. In addition, two identifier handling methods are needed:
+  `store.isEqual(id1, id2)` is required to check the equality of the two content addresses / IDs
+  (which may be custom for that data type). `store.isLink(obj)` is used to determine if an object is a link type
+  that can be used for `load()` operations on the store. It is important that link types be different to standard
+  JavaScript arrays and don't share properties used by the serialized form of an IAMap (e.g. such that a
+  `typeof obj === 'object' && Array.isArray(obj.data)`) .This is because a node data element may either be a link to
+  a child node, or an inlined child node, so `isLink()` should be able to determine if an object is a link, and if not,
+  `Array.isArray(obj)` will determine if that data element is a bucket of elements, or the above object check be able
+  to determine that an inline child node exists at the data element.
+  The `store` object should take the following form:
+  `{ async save(node):id, async load(id):node, isEqual(id,id):boolean, isLink(obj):boolean }`
 * **`options`** _(`Object`)_: Options for this IAMap
   * **`options.hashAlg`** _(`string`)_: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
     hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
@@ -354,8 +362,11 @@ Where `data` is an array of a mix of either buckets or links:
 
 * A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
   or whatever type has been provided in `set()` operations for this `IAMap`.
-* A link is an Object with a single key `'link'` whose value is of the type provided by the backing store in
-  `save()` operations.
+* A link is an object of the type that the backing store provides upon `save()` operations and can be identified
+  with `isLink()` calls.
+
+Buckets and links are differentiated by their "kind": a bucket is an array while a link is a "link" kind as dictated
+by the backing store. We use `Array.isArray()` and `store.isLink()` to perform this differentiation.
 
 **Return value**  _(`Object`)_: An object representing the internal state of this local `IAMap` node, including its links to child nodes
   if any.
@@ -432,7 +443,7 @@ Get the final value of the traversal, if one has been found.
 **Return value** : A value, if one has been found, otherwise `undefined` (if one has not been found or we are mid-traversal)
 
 <a name="iamap__traverseGet"></a>
-### `iamap.traverseGet(rootBlock, key, isEqual)`
+### `iamap.traverseGet(rootBlock, key, isEqual, isLink)`
 
 Perform a per-block synchronous traversal. Takes a root block, the key being looked up and an
 `isEqual()` for comparing identifiers. Returns a [`GetTraversal`](#GetTraversal) object for performing
@@ -445,6 +456,8 @@ traversals block-by-block.
   acceptable `key` types.
 * **`isEqual`** _(`function`)_: A function that compares two identifiers in the data store. See
   [`iamap.create`](#iamap__create) for details on the backing store and the requirements of an `isEqual()` function.
+* **`isLink`** _(`function`)_: A function that can discern if an object is a link type used by the data store. See
+  [`iamap.create`](#iamap__create) for details on the backing store and the requirements of an `isLink()` function.
 
 **Return value** : A [`GetTraversal`](#GetTraversal) object for performing the traversal block-by-block.
 

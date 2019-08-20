@@ -41,6 +41,9 @@ function memoryStore () {
     // perform an appropriate comparison here.
     isEqual (id1, id2) {
       return id1 === id2
+    },
+    isLink (obj) {
+      return typeof obj === 'number'
     }
   }
 }
