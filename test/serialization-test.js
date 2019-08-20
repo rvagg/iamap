@@ -14,7 +14,6 @@ test('empty object', async (t) => {
   const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   const emptySerialized = {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.alloc((2 ** 8) / 8),
     data: []
@@ -32,7 +31,6 @@ test('empty custom', async (t) => {
   const store = memoryStore()
   const emptySerialized = {
     hashAlg: 'identity', // identity
-    bitWidth: 8,
     bucketSize: 3,
     map: Buffer.alloc(2 ** 8 / 8),
     data: []
@@ -80,7 +78,6 @@ test('malformed', async (t) => {
   const emptyMap = Buffer.alloc(2 ** 8 / 8)
   let emptySerialized = {
     hashAlg: 'sha2-256', // not registered
-    bitWidth: 8,
     bucketSize: 3,
     map: emptyMap,
     data: []
@@ -90,17 +87,6 @@ test('malformed', async (t) => {
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
   emptySerialized.hashAlg = 'identity' // identity
-  emptySerialized.bitWidth = 'foo'
-  id = await store.save(emptySerialized)
-  t.rejects(iamap.load(store, id))
-
-  emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.bitWidth = -1
-  id = await store.save(emptySerialized)
-  t.rejects(iamap.load(store, id))
-
-  emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.bitWidth = 8
   emptySerialized.bucketSize = 'foo'
   id = await store.save(emptySerialized)
   t.rejects(iamap.load(store, id))
@@ -174,7 +160,6 @@ test('fromChildSerializable', async (t) => {
 
   const emptySerializedRoot = {
     hashAlg: 'identity',
-    bitWidth: 8,
     bucketSize: 3,
     map: Buffer.alloc(2 ** 8 / 8),
     data: []

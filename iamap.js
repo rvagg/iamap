@@ -450,7 +450,8 @@ class IAMap {
    * JavaScript `Object` including a representation of its data array that the key/value pairs it contains as well as
    * the identifiers of child nodes.
    * Root nodes (depth==0) contain the full map configuration information, while intermediate and leaf nodes contain only
-   * data that cannot be inferred by traversal from a root node that already has this data (hashAlg, bitWidth and bucketSize).
+   * data that cannot be inferred by traversal from a root node that already has this data (hashAlg and bucketSize -- bitWidth
+   * is inferred by the length of the `map` byte array).
    * The backing store can use this representation to create a suitable serialised form. When loading from the backing store,
    * `IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object. Where
    * root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
@@ -462,7 +463,6 @@ class IAMap {
    * ```
    * {
    *   hashAlg: string
-   *   bitWidth: number
    *   bucketSize: number
    *   map: Buffer
    *   data: Array
@@ -491,7 +491,6 @@ class IAMap {
     const r = { map: this.map }
     if (this.depth === 0) {
       r.hashAlg = this.config.hashAlg
-      r.bitWidth = this.config.bitWidth
       r.bucketSize = this.config.bucketSize
     }
     r.data = this.data.map((e) => {
@@ -752,7 +751,7 @@ const dummyStore = { load () {}, save () {}, isEqual () { return false } }
 class GetTraversal {
   constructor (rootBlock, key, isEqual, depth) {
     const isIAMap = IAMap.isIAMap(rootBlock)
-    this._config = isIAMap ? rootBlock.config : rootBlock
+    this._config = isIAMap ? rootBlock.config : serializableToOptions(rootBlock)
     this._key = Buffer.isBuffer(key) ? key : Buffer.from(key)
     this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
 
@@ -828,7 +827,7 @@ function traverseGet (rootBlock, key, isEqual, depth) {
  */
 class EntriesTraversal {
   constructor (rootBlock, depth) {
-    this._config = IAMap.isIAMap(rootBlock) ? rootBlock.config : rootBlock
+    this._config = IAMap.isIAMap(rootBlock) ? rootBlock.config : serializableToOptions(rootBlock)
     this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
 
     this._stack = []
@@ -967,7 +966,6 @@ async function * traverseKV (root, type) {
  */
 function isRootSerializable (serializable) {
   return typeof serializable.hashAlg === 'string' &&
-    typeof serializable.bitWidth === 'number' &&
     typeof serializable.bucketSize === 'number'
 }
 
@@ -1007,24 +1005,28 @@ function isSerializable (serializable) {
  * node.
  */
 function fromSerializable (store, id, serializable, options = null, depth = 0) {
+  assert(isSerializable(serializable))
   if (depth === 0) { // even if options were supplied, ignore them and use what's in the serializable
     if (!isRootSerializable(serializable)) {
       throw new Error('Object does not appear to be an IAMap root (depth==0)')
     }
     // don't use passed-in options
-    options = {
-      hashAlg: serializable.hashAlg,
-      bitWidth: serializable.bitWidth,
-      bucketSize: serializable.bucketSize
-    }
+    options = serializableToOptions(serializable)
   }
-  assert(Array.isArray(serializable.data))
   const data = serializable.data.map(Element.fromSerializable)
   const node = new IAMap(store, options, serializable.map, depth, data)
   if (id != null) {
     ro(node, 'id', id)
   }
   return node
+}
+
+function serializableToOptions (serializable) {
+  return {
+    hashAlg: serializable.hashAlg,
+    bitWidth: Math.log2(serializable.map.length * 8), // inverse of (2**bitWidth) / 8
+    bucketSize: serializable.bucketSize
+  }
 }
 
 IAMap.isIAMap = function isIAMap (node) {

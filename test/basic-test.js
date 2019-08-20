@@ -12,9 +12,8 @@ test('empty object', async (t) => {
   const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
-    map: Buffer.alloc(32),
+    map: Buffer.alloc(32), // 2**8, bitWidth of 8
     data: []
   })
   t.strictEqual(store.map.size, 1)
@@ -39,14 +38,12 @@ test('test basic set/get', async (t) => {
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.alloc(32),
     data: []
   })
   t.strictDeepEqual(newMap.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.from(newMap.map),
     data: [[[Buffer.from('foo'), 'bar']]]
@@ -75,14 +72,12 @@ test('test basic set/set-same/get', async (t) => {
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.alloc(32),
     data: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.from(newMap1.map),
     data: [[[Buffer.from('foo'), 'bar']]]
@@ -114,14 +109,12 @@ test('test basic set/update/get', async (t) => {
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.alloc(32),
     data: []
   })
   t.strictDeepEqual(newMap1.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.from(newMap1.map),
     data: [[[Buffer.from('foo'), 'bar']]]
@@ -129,7 +122,6 @@ test('test basic set/update/get', async (t) => {
   t.ok(newMap1.map !== 0)
   t.strictDeepEqual(newMap2.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.from(newMap1.map),
     data: [[[Buffer.from('foo'), 'baz']]]
@@ -161,14 +153,12 @@ test('test basic set/get/delete', async (t) => {
   // original map isn't mutated
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.alloc(32),
     data: []
   })
   t.strictDeepEqual(setMap.toSerializable(), {
     hashAlg: 'murmur3-32',
-    bitWidth: 8,
     bucketSize: 5,
     map: Buffer.from(setMap.map),
     data: [[[Buffer.from('foo'), 'bar']]]

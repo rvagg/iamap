@@ -323,7 +323,8 @@ Returns a serialisable form of this `IAMap` node. The internal representation of
 JavaScript `Object` including a representation of its data array that the key/value pairs it contains as well as
 the identifiers of child nodes.
 Root nodes (depth==0) contain the full map configuration information, while intermediate and leaf nodes contain only
-data that cannot be inferred by traversal from a root node that already has this data (hashAlg, bitWidth and bucketSize).
+data that cannot be inferred by traversal from a root node that already has this data (hashAlg and bucketSize -- bitWidth
+is inferred by the length of the `map` byte array).
 The backing store can use this representation to create a suitable serialised form. When loading from the backing store,
 `IAMap` expects to receive an object with the same layout from which it can instantiate a full `IAMap` object. Where
 root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
@@ -335,7 +336,6 @@ Root node form:
 ```
 {
   hashAlg: string
-  bitWidth: number
   bucketSize: number
   map: Buffer
   data: Array

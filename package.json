@@ -15,7 +15,7 @@
     "multicodec": "~0.5.5"
   },
   "devDependencies": {
-    "jsdoc4readme": "^1.2.1",
+    "jsdoc4readme": "~1.3.0",
     "murmurhash3js-revisited": "~3.0.0",
     "tap": "~14.6.1"
   },

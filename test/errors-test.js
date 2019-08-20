@@ -45,5 +45,8 @@ test('constructor errors', (t) => {
   t.rejects(iamap.create(devnull, { hashAlg: 'identity', bitWidth: 4, bucketSize: 1 }))
   t.resolves(iamap.create(devnull, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }))
   t.resolves(iamap.create(devnull, { hashAlg: 'identity', bitWidth: 4, bucketSize: 16 }))
+  t.rejects(iamap.create(devnull, { hashAlg: 'identity', bitWidth: 4, bucketSize: 16 }, 'blerk'))
+  t.rejects(iamap.create(devnull, { hashAlg: 'identity', bitWidth: 10, bucketSize: 16 }, Buffer.alloc(2)))
+  t.resolves(iamap.create(devnull, { hashAlg: 'identity', bitWidth: 10, bucketSize: 16 }, Buffer.alloc((2 ** 10) / 8)))
   t.done()
 })
