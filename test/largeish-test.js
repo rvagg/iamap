@@ -10,12 +10,12 @@ const PEAK = 100 // not huge but delete is super expensive
 
 const store = memoryStore() // same store across tests
 let loadId
-let keys = []
+const keys = []
 
 test(`fill with ${PEAK}`, async (t) => {
   let map = await iamap.create(store, { hashAlg: 'murmur3-32' })
-  let expectedValues = []
-  let expectedEntries = []
+  const expectedValues = []
+  const expectedEntries = []
 
   t.strictDeepEqual(map.toSerializable(), {
     hashAlg: 'murmur3-32',
@@ -43,8 +43,8 @@ test(`fill with ${PEAK}`, async (t) => {
   t.strictEqual(await map.isInvariant(), true)
 
   for (let i = 0; i < PEAK; i++) {
-    let key = `k${i}`
-    let value = `v${i}`
+    const key = `k${i}`
+    const value = `v${i}`
     map = await map.set(key, value)
     keys.push(key)
     expectedValues.push(value)
@@ -55,16 +55,16 @@ test(`fill with ${PEAK}`, async (t) => {
     t.strictEqual(await map.has(`k${i}`), true)
   }
 
-  let actualKeys = []
-  for await (let k of map.keys()) {
+  const actualKeys = []
+  for await (const k of map.keys()) {
     actualKeys.push(k.toString())
   }
-  let actualValues = []
-  for await (let v of map.values()) {
+  const actualValues = []
+  for await (const v of map.values()) {
     actualValues.push(v.toString())
   }
-  let actualEntries = []
-  for await (let e of map.entries()) {
+  const actualEntries = []
+  for await (const e of map.entries()) {
     actualEntries.push(JSON.stringify({ key: e.key.toString(), value: e.value }))
   }
 
@@ -74,9 +74,9 @@ test(`fill with ${PEAK}`, async (t) => {
   actualKeys.sort()
   actualValues.sort()
   actualEntries.sort()
-  t.deepEqual(actualKeys, [ 'bar', 'foo' ].concat(keys))
-  t.deepEqual(actualValues, [ 'bar', 'booz' ].concat(expectedValues))
-  t.deepEqual(actualEntries, [ '{"key":"bar","value":"booz"}', '{"key":"foo","value":"bar"}' ].concat(expectedEntries))
+  t.deepEqual(actualKeys, ['bar', 'foo'].concat(keys))
+  t.deepEqual(actualValues, ['bar', 'booz'].concat(expectedValues))
+  t.deepEqual(actualEntries, ['{"key":"bar","value":"booz"}', '{"key":"foo","value":"bar"}'].concat(expectedEntries))
 
   loadId = map.id
 })
@@ -101,14 +101,14 @@ test(`load ${PEAK} node map and empty it`, async (t) => {
   map = await map.delete('bar')
   t.ok(!await map.get('bar'))
 
-  let shuffledKeys = keys.slice().sort(() => 0.5 - Math.random()) // randomish
+  const shuffledKeys = keys.slice().sort(() => 0.5 - Math.random()) // randomish
   for (let i = 0; i < shuffledKeys.length; i++) {
-    let key = shuffledKeys[i]
+    const key = shuffledKeys[i]
     map = await map.delete(key)
     t.strictEqual(await map.get(key), undefined)
     for (let j = i + 1; j < shuffledKeys.length; j++) { // make sure the rest are still there
-      let key = shuffledKeys[j]
-      let value = key.replace(/^k/, 'v')
+      const key = shuffledKeys[j]
+      const value = key.replace(/^k/, 'v')
       t.strictEqual(await map.get(key), value)
     }
   }

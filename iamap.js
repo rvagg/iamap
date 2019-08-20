@@ -47,7 +47,7 @@ const hasherRegistry = {}
  */
 async function create (store, options, map, depth, data) {
   // map, depth and data are intended for internal use
-  let newNode = new IAMap(store, options, map, depth, data)
+  const newNode = new IAMap(store, options, map, depth, data)
   return save(store, newNode)
 }
 
@@ -69,7 +69,7 @@ async function load (store, id, depth = 0, options) {
   if (depth !== 0 && typeof options !== 'object') {
     throw new Error('Cannot load() without options at depth > 0')
   }
-  let serialized = await store.load(id)
+  const serialized = await store.load(id)
   return fromSerializable(store, id, serialized, options, depth)
 }
 
@@ -110,7 +110,7 @@ class KV {
   }
 
   toSerializable () {
-    return [ this.key, this.value ]
+    return [this.key, this.value]
   }
 }
 
@@ -189,12 +189,12 @@ class IAMap {
     this.id = null
     ro(this, 'config', buildConfig(options))
 
-    let hashBytes = hasherRegistry[options.hashAlg].hashBytes
+    const hashBytes = hasherRegistry[options.hashAlg].hashBytes
 
     if (map !== undefined && !Buffer.isBuffer(map)) {
       throw new TypeError('`map` must be a Buffer')
     }
-    let mapLength = Math.ceil(Math.pow(2, this.config.bitWidth) / 8)
+    const mapLength = Math.ceil(Math.pow(2, this.config.bitWidth) / 8)
     if (map !== undefined && map.length !== mapLength) {
       throw new Error('`map` must be a Buffer of length ' + mapLength)
     }
@@ -211,7 +211,7 @@ class IAMap {
     }
 
     ro(this, 'data', Object.freeze(data || []))
-    for (let e of this.data) {
+    for (const e of this.data) {
       if (!(e instanceof Element)) {
         throw new TypeError('`data` array must contain only `Element` types')
       }
@@ -238,7 +238,7 @@ class IAMap {
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
-      let { data, link } = findElement(this, bitpos, key)
+      const { data, link } = findElement(this, bitpos, key)
       if (data) {
         if (data.found) {
           if (data.bucketEntry.value === value) {
@@ -257,9 +257,9 @@ class IAMap {
           return updateBucket(this, data.elementAt, -1, key, value)
         }
       } else { // link
-        let child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(child)
-        let newChild = await child.set(key, value)
+        const newChild = await child.set(key, value)
         return updateNode(this, link.elementAt, key, newChild)
       }
     } else { // we don't have an element for this hash portion, make one
@@ -279,11 +279,11 @@ class IAMap {
   async get (key) {
     const traversal = traverseGet(this, key, this.store.isEqual, this.depth)
     while (true) {
-      let nextId = traversal.traverse()
+      const nextId = traversal.traverse()
       if (!nextId) {
         return traversal.value()
       }
-      let child = await this.store.load(nextId)
+      const child = await this.store.load(nextId)
       assert(child)
       traversal.next(child)
     }
@@ -321,7 +321,7 @@ class IAMap {
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
-      let { data, link } = findElement(this, bitpos, key)
+      const { data, link } = findElement(this, bitpos, key)
       if (data) {
         if (data.found) {
           if (this.depth !== 0 && this.directNodeCount() === 0 && this.directEntryCount() === this.config.bucketSize + 1) {
@@ -332,9 +332,9 @@ class IAMap {
           } else {
             // we'll either have more entries left than this.config.bucketSize or we're at the root node
             // so this is a simple bucket removal, no collapsing needed (root nodes can't be collapsed)
-            let lastInBucket = this.data.length === 1
+            const lastInBucket = this.data.length === 1
             // we have at least one child node or too many entries in buckets to be collapsed
-            let newData = removeFromBucket(this.data, bitpos, data.elementAt, lastInBucket, data.bucketIndex)
+            const newData = removeFromBucket(this.data, bitpos, data.elementAt, lastInBucket, data.bucketIndex)
             let newMap = this.map
             if (lastInBucket) {
               newMap = setBit(newMap, bitpos, 0)
@@ -346,9 +346,9 @@ class IAMap {
           return this
         }
       } else { // link
-        let child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(child)
-        let newChild = await child.delete(key)
+        const newChild = await child.delete(key)
         if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
           return this
         }
@@ -384,11 +384,11 @@ class IAMap {
    */
   async size () {
     let c = 0
-    for (let e of this.data) {
+    for (const e of this.data) {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        let child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await load(this.store, e.link, this.depth + 1, this.config)
         c += await child.size()
       }
     }
@@ -437,9 +437,9 @@ class IAMap {
    */
   async * ids () {
     yield this.id
-    for (let e of this.data) {
+    for (const e of this.data) {
       if (e.link) {
-        let child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await load(this.store, e.link, this.depth + 1, this.config)
         yield * child.ids()
       }
     }
@@ -488,7 +488,7 @@ class IAMap {
    * if any.
    */
   toSerializable () {
-    let r = { map: this.map }
+    const r = { map: this.map }
     if (this.depth === 0) {
       r.hashAlg = this.config.hashAlg
       r.bitWidth = this.config.bitWidth
@@ -534,20 +534,20 @@ class IAMap {
    * @returns {Promise<boolean>} A Promise with a boolean value indicating whether this IAMap is correctly formatted.
    */
   async isInvariant () {
-    let size = await this.size()
-    let entryArity = this.directEntryCount()
-    let nodeArity = this.directNodeCount()
-    let arity = entryArity + nodeArity
+    const size = await this.size()
+    const entryArity = this.directEntryCount()
+    const nodeArity = this.directNodeCount()
+    const arity = entryArity + nodeArity
     let sizePredicate = 2 // 2 == 'more than one'
     if (nodeArity === 0) {
       sizePredicate = Math.min(2, entryArity) // 0, 1 or 2=='more than one'
     }
 
-    let inv1 = size - entryArity >= 2 * (arity - entryArity)
-    let inv2 = arity === 0 ? sizePredicate === 0 : true
-    let inv3 = (arity === 1 && entryArity === 1) ? sizePredicate === 1 : true
-    let inv4 = arity >= 2 ? sizePredicate === 2 : true
-    let inv5 = nodeArity >= 0 && entryArity >= 0 && ((entryArity + nodeArity) === arity)
+    const inv1 = size - entryArity >= 2 * (arity - entryArity)
+    const inv2 = arity === 0 ? sizePredicate === 0 : true
+    const inv3 = (arity === 1 && entryArity === 1) ? sizePredicate === 1 : true
+    const inv4 = arity >= 2 ? sizePredicate === 2 : true
+    const inv5 = nodeArity >= 0 && entryArity >= 0 && ((entryArity + nodeArity) === arity)
 
     return inv1 && inv2 && inv3 && inv4 && inv5
   }
@@ -568,7 +568,7 @@ class IAMap {
 
 // store a new node and assign it an ID
 async function save (store, newNode) {
-  let id = await store.save(newNode.toSerializable())
+  const id = await store.save(newNode.toSerializable())
   ro(newNode, 'id', id)
   return newNode
 }
@@ -580,12 +580,12 @@ async function save (store, newNode) {
 { link: { elementAt, element } }
 */
 function findElement (node, bitpos, key) {
-  let elementAt = index(node.map, bitpos)
-  let element = node.data[elementAt]
+  const elementAt = index(node.map, bitpos)
+  const element = node.data[elementAt]
   assert(element)
   if (element.bucket) { // data element
     for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
-      let bucketEntry = element.bucket[bucketIndex]
+      const bucketEntry = element.bucket[bucketIndex]
       if (bucketEntry.key.equals(key)) {
         return { data: { found: true, elementAt, element, bucketIndex, bucketEntry } }
       }
@@ -598,18 +598,18 @@ function findElement (node, bitpos, key) {
 
 // new element for this node, i.e. first time this hash portion has been seen here
 async function addNewElement (node, bitpos, key, value) {
-  let insertAt = index(node.map, bitpos)
-  let newData = node.data.slice()
-  newData.splice(insertAt, 0, new Element([ new KV(key, value) ]))
-  let newMap = setBit(node.map, bitpos, 1)
+  const insertAt = index(node.map, bitpos)
+  const newData = node.data.slice()
+  newData.splice(insertAt, 0, new Element([new KV(key, value)]))
+  const newMap = setBit(node.map, bitpos, 1)
   return create(node.store, node.config, newMap, node.depth, newData)
 }
 
 // update an existing bucket with a new k/v pair
 async function updateBucket (node, elementAt, bucketAt, key, value) {
-  let oldElement = node.data[elementAt]
-  let newElement = new Element(oldElement.bucket.slice())
-  let newKv = new KV(key, value)
+  const oldElement = node.data[elementAt]
+  const newElement = new Element(oldElement.bucket.slice())
+  const newKv = new KV(key, value)
   if (bucketAt === -1) {
     newElement.bucket.push(newKv)
     // in-bucket sort is required to maintain a canonical state
@@ -617,7 +617,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   } else {
     newElement.bucket[bucketAt] = newKv
   }
-  let newData = node.data.slice()
+  const newData = node.data.slice()
   newData[elementAt] = newElement
   return create(node.store, node.config, node.map, node.depth, newData)
 }
@@ -625,14 +625,14 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
 // overflow of a bucket means it has to be replaced with a child node, tricky surgery
 async function replaceBucketWithNode (node, bitpos, elementAt) {
   let newNode = new IAMap(node.store, node.config, undefined, node.depth + 1)
-  let element = node.data[elementAt]
+  const element = node.data[elementAt]
   assert(element)
   assert(element.bucket)
-  for (let c of element.bucket) {
+  for (const c of element.bucket) {
     newNode = await newNode.set(c.key, c.value)
   }
   newNode = await save(node.store, newNode)
-  let newData = node.data.slice()
+  const newData = node.data.slice()
   newData[elementAt] = new Element(null, newNode.id)
   return create(node.store, node.config, node.map, node.depth, newData)
 }
@@ -640,8 +640,8 @@ async function replaceBucketWithNode (node, bitpos, elementAt) {
 // similar to addNewElement() but for new child nodes
 async function updateNode (node, elementAt, key, newChild) {
   assert(newChild.id)
-  let newElement = new Element(null, newChild.id)
-  let newData = node.data.slice()
+  const newElement = new Element(null, newChild.id)
+  const newData = node.data.slice()
   newData[elementAt] = newElement
   return create(node.store, node.config, node.map, node.depth, newData)
 }
@@ -650,14 +650,14 @@ async function updateNode (node, elementAt, key, newChild) {
 // bucket; used for collapsing a node and sending it upward
 function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
-  let newMap = setBit(Buffer.alloc(node.map.length), mask(hash, 0, node.config.bitWidth), 1)
-  let newBucket = node.data.reduce((p, c, i) => {
+  const newMap = setBit(Buffer.alloc(node.map.length), mask(hash, 0, node.config.bitWidth), 1)
+  const newBucket = node.data.reduce((p, c, i) => {
     if (i === elementAt) {
       if (c.bucket.length === 1) { // only element in bucket, skip it
         return p
       } else {
         // there's more in this bucket, make a temporary one, remove it and concat it
-        let tmpBucket = c.bucket.slice()
+        const tmpBucket = c.bucket.slice()
         tmpBucket.splice(bucketIndex, 1)
         return p.concat(tmpBucket)
       }
@@ -666,17 +666,17 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
     }
   }, [])
   newBucket.sort((a, b) => Buffer.compare(a.key, b.key))
-  let newElement = new Element(newBucket)
-  return create(node.store, node.config, newMap, 0, [ newElement ])
+  const newElement = new Element(newBucket)
+  return create(node.store, node.config, newMap, 0, [newElement])
 }
 
 // simple delete from an existing bucket in this node
 function removeFromBucket (data, bitpos, elementAt, lastInBucket, bucketIndex) {
-  let newData = data.slice()
+  const newData = data.slice()
   if (!lastInBucket) {
     // bucket will not be empty, remove only the element from it
-    let oldElement = data[elementAt]
-    let newElement = new Element(oldElement.bucket.slice())
+    const oldElement = data[elementAt]
+    const newElement = new Element(oldElement.bucket.slice())
     newElement.bucket.splice(bucketIndex, 1)
     newData.splice(elementAt, 1, newElement) // replace old bucket
   } else {
@@ -693,17 +693,17 @@ async function collapseNodeInline (node, bitpos, newNode) {
   // it had in node's element array
   assert.strictEqual(newNode.data.length, 1)
   assert(newNode.data[0].bucket)
-  let newBucket = newNode.data[0].bucket.slice()
-  let newElement = new Element(newBucket)
-  let elementIndex = index(node.map, bitpos)
-  let newData = node.data.slice()
+  const newBucket = newNode.data[0].bucket.slice()
+  const newElement = new Element(newBucket)
+  const elementIndex = index(node.map, bitpos)
+  const newData = node.data.slice()
   newData[elementIndex] = newElement
 
   return create(node.store, node.config, node.map, node.depth, newData)
 }
 
 function buildConfig (options) {
-  let config = {}
+  const config = {}
 
   if (!options) {
     throw new TypeError('Invalid `options` object')
@@ -751,7 +751,7 @@ const dummyStore = { load () {}, save () {}, isEqual () { return false } }
  */
 class GetTraversal {
   constructor (rootBlock, key, isEqual, depth) {
-    let isIAMap = IAMap.isIAMap(rootBlock)
+    const isIAMap = IAMap.isIAMap(rootBlock)
     this._config = isIAMap ? rootBlock.config : rootBlock
     this._key = Buffer.isBuffer(key) ? key : Buffer.from(key)
     this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
@@ -773,7 +773,7 @@ class GetTraversal {
   traverse () {
     const bitpos = mask(this._hash, this._depth, this._config.bitWidth)
     if (bitmapHas(this._node.map, bitpos)) {
-      let { data, link } = findElement(this._node, bitpos, this._key)
+      const { data, link } = findElement(this._node, bitpos, this._key)
       if (data && data.found) { // found!
         this._value = data.bucketEntry.value
       } else if (link) { // link
@@ -860,7 +860,7 @@ class EntriesTraversal {
         return null
       }
     }
-    let link = n.node.data[n.nextLink].link
+    const link = n.node.data[n.nextLink].link
     n.nextLink = this._nextLink(n.node, n.nextLink + 1)
     return link
   }
@@ -872,18 +872,18 @@ class EntriesTraversal {
    * returned from {@link EntriesTraversal#traverse}.
    */
   next (block) {
-    let node = IAMap.isIAMap(block)
+    const node = IAMap.isIAMap(block)
       ? block
       : fromSerializable(dummyStore, 0, block, this._config, this._stack.length + this._depth)
     this._stack.push({ node, nextLink: this._nextLink(node, 0) })
   }
 
   * _visit () {
-    let n = this._peek()
+    const n = this._peek()
     if (n) {
-      for (let e of n.node.data) {
+      for (const e of n.node.data) {
         if (e.bucket) {
-          for (let kv of e.bucket) {
+          for (const kv of e.bucket) {
             yield kv
           }
         }
@@ -897,7 +897,7 @@ class EntriesTraversal {
    * @returns {Iterator} An iterator that yields keys in `Buffer` form (regardless of how they were set).
    */
   * keys () {
-    for (let kv of this._visit()) {
+    for (const kv of this._visit()) {
       yield kv.key
     }
   }
@@ -908,7 +908,7 @@ class EntriesTraversal {
    * @returns {Iterator} An iterator that yields value objects.
    */
   * values () {
-    for (let kv of this._visit()) {
+    for (const kv of this._visit()) {
       yield kv.value
     }
   }
@@ -920,7 +920,7 @@ class EntriesTraversal {
    * @returns {Iterator} An iterator that yields objects with the properties `key` and `value`.
    */
   * entries () {
-    for (let kv of this._visit()) {
+    for (const kv of this._visit()) {
       yield { key: kv.key, value: kv.value }
     }
   }
@@ -943,15 +943,15 @@ function traverseEntries (rootBlock) {
 
 // utility for IAMap#keys(), IAMap#values() and IAMap#entries()
 async function * traverseKV (root, type) {
-  let traversal = new EntriesTraversal(root, root.depth)
+  const traversal = new EntriesTraversal(root, root.depth)
 
   while (true) {
     yield * traversal[type]()
-    let id = traversal.traverse()
+    const id = traversal.traverse()
     if (!id) {
       break
     }
-    let child = await root.store.load(id)
+    const child = await root.store.load(id)
     traversal.next(child)
   }
 }
@@ -1019,8 +1019,8 @@ function fromSerializable (store, id, serializable, options = null, depth = 0) {
     }
   }
   assert(Array.isArray(serializable.data))
-  let data = serializable.data.map(Element.fromSerializable)
-  let node = new IAMap(store, options, serializable.map, depth, data)
+  const data = serializable.data.map(Element.fromSerializable)
+  const node = new IAMap(store, options, serializable.map, depth, data)
   if (id != null) {
     ro(node, 'id', id)
   }

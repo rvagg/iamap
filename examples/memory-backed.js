@@ -29,7 +29,7 @@ function memoryStore () {
 
   return {
     save (obj) { // this can be async
-      let id = hash(obj)
+      const id = hash(obj)
       map.set(id, obj)
       return id
     },
@@ -50,7 +50,7 @@ function memoryStore () {
 // an array of bytes whose length matches the `hashLength` that we provide to `registerHasher()`.
 function murmurHasher (key) {
   // key is a `Buffer`
-  let b = Buffer.alloc(4)
+  const b = Buffer.alloc(4)
   b.writeUInt32LE(murmurhash3.x86.hash32(key))
   // we now have a 4-byte hash
   return b
@@ -63,7 +63,7 @@ async function memoryBacked () {
   const store = memoryStore() // new store
   let map = await iamap.create(store, { hashAlg: 'murmur3-32' }) // new map with default options, our hasher and custom store
 
-  for await (let pkg of findPackages(path.join(__dirname, '..'))) {
+  for await (const pkg of findPackages(path.join(__dirname, '..'))) {
     // Store a string key and a JavaScript object as a value, this will work for our store but if we needed to store it
     // elsewhere our store.save() is going to be in trouble because the keys and values will show up like they are here.
     // In some cases, introducing a link-layer might be in order, only insert links as values and allow them to easily
@@ -74,7 +74,7 @@ async function memoryBacked () {
   }
 
   // iterate with `entries()` which has no guarantees of meaningful order
-  for await (let entry of map.entries()) {
+  for await (const entry of map.entries()) {
     console.log(`${entry.key.toString()}${Array(Math.max(0, 30 - entry.key.length)).join(' ')} ${entry.value.description}`)
   }
 
@@ -83,12 +83,12 @@ async function memoryBacked () {
 
 // recursive async iterator that finds and emits all package.json files found from our parent directory downward
 async function * findPackages (dir) {
-  let files = await fs.readdir(dir)
-  for (let f of files) {
-    let fp = path.join(dir, f)
+  const files = await fs.readdir(dir)
+  for (const f of files) {
+    const fp = path.join(dir, f)
     if (f === 'package.json') {
       try {
-        let pkg = JSON.parse(await fs.readFile(fp, 'utf8'))
+        const pkg = JSON.parse(await fs.readFile(fp, 'utf8'))
         if (pkg.version && pkg.name) {
           yield pkg
         }

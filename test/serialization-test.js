@@ -128,16 +128,16 @@ test('malformed', async (t) => {
   t.rejects(iamap.load(store, id, 'foo'))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.data = [ { woot: 'nope' } ]
+  emptySerialized.data = [{ woot: 'nope' }]
   id = await store.save(emptySerialized)
   t.rejects(iamap.load(store, id))
 
   emptySerialized = Object.assign({}, emptySerialized) // clone
-  emptySerialized.data = [ [ { nope: 'nope' } ] ]
+  emptySerialized.data = [[{ nope: 'nope' }]]
   id = await store.save(emptySerialized)
   t.rejects(iamap.load(store, id))
 
-  let mapCopy = Buffer.from(emptyMap)
+  const mapCopy = Buffer.from(emptyMap)
   mapCopy.writeUInt8(0b110011, 0)
   emptySerialized = {
     map: mapCopy,
@@ -166,22 +166,22 @@ test('malformed', async (t) => {
     }, 'foobar')
   })
 
-  t.throws(() => new Constructor(store, { hashAlg: 'identity', bitWidth: 8 }, Buffer.alloc(2 ** 8 / 8), 0, [ { nope: 'nope' } ]))
+  t.throws(() => new Constructor(store, { hashAlg: 'identity', bitWidth: 8 }, Buffer.alloc(2 ** 8 / 8), 0, [{ nope: 'nope' }]))
 })
 
 test('fromChildSerializable', async (t) => {
   const store = memoryStore()
 
-  let emptySerializedRoot = {
+  const emptySerializedRoot = {
     hashAlg: 'identity',
     bitWidth: 8,
     bucketSize: 3,
     map: Buffer.alloc(2 ** 8 / 8),
     data: []
   }
-  let childMap = Buffer.alloc(2 ** 8 / 8)
+  const childMap = Buffer.alloc(2 ** 8 / 8)
   childMap.writeUInt8(0b110011, 4)
-  let emptySerializedChild = {
+  const emptySerializedChild = {
     map: childMap,
     data: []
   }
@@ -190,7 +190,7 @@ test('fromChildSerializable', async (t) => {
   t.strictEqual(iamap.isSerializable(emptySerializedRoot), true)
   t.strictEqual(iamap.isSerializable(emptySerializedChild), true)
 
-  let root = await iamap.fromSerializable(store, 'somerootid', emptySerializedRoot)
+  const root = await iamap.fromSerializable(store, 'somerootid', emptySerializedRoot)
 
   t.strictDeepEqual(root.toSerializable(), emptySerializedRoot)
   t.strictEqual(root.id, 'somerootid')
@@ -214,14 +214,14 @@ test('fromChildSerializable', async (t) => {
 
 test('bad loads', async (t) => {
   const store = memoryStore()
-  let map = Buffer.alloc(2 ** 8 / 8)
+  const map = Buffer.alloc(2 ** 8 / 8)
   map.writeUInt8(0b110011, 4)
 
-  let emptySerialized = {
+  const emptySerialized = {
     map: map,
     data: []
   }
-  let id = await store.save(emptySerialized)
+  const id = await store.save(emptySerialized)
 
   t.rejects(iamap.load(store, id, 32, {
     bitWidth: 8,

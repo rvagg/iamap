@@ -9,11 +9,11 @@ function mask (hash, depth, nbits) {
 // set the `position` bit in the given `bitmap` to be `set` (truthy=1, falsey=0)
 function setBit (bitmap, position, set) {
   // if we assume that `bitmap` is already the opposite of `set`, we could skip this check
-  let byte = Math.floor(position / 8)
-  let offset = position % 8
-  let has = bitmapHas(bitmap, undefined, byte, offset)
+  const byte = Math.floor(position / 8)
+  const offset = position % 8
+  const has = bitmapHas(bitmap, undefined, byte, offset)
   if ((set && !has) || (!set && has)) {
-    let newBitmap = Buffer.from(bitmap)
+    const newBitmap = Buffer.from(bitmap)
     let b = bitmap[byte]
     if (set) {
       b |= (1 << offset)

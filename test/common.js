@@ -5,7 +5,7 @@ const assert = require('assert')
 
 function murmurHasher (key) {
   assert(Buffer.isBuffer(key))
-  let b = Buffer.alloc(4)
+  const b = Buffer.alloc(4)
   b.writeUInt32LE(murmurhash3.x86.hash32(key))
   return b
 }
@@ -30,7 +30,7 @@ function memoryStore () {
     saves: 0,
     loads: 0,
     save (obj) { // this can be async
-      let id = hash(obj)
+      const id = hash(obj)
       this.map.set(id, obj)
       this.saves++
       return id

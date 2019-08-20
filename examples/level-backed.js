@@ -68,9 +68,9 @@ const store = {
   // CBOR (binary) encoded objects as the values
   backingDb: level(dbLocation, { keyEncoding: 'ascii', valueEncoding: 'binary' }),
   encode: async (obj) => {
-    let block = await serialize(obj)
-    let multihash = multihashing(block, dagCbor.util.defaultHashAlg)
-    let cid = new CID(1, multicodec.print[multicodec.DAG_CBOR], multihash)
+    const block = await serialize(obj)
+    const multihash = multihashing(block, dagCbor.util.defaultHashAlg)
+    const cid = new CID(1, multicodec.print[multicodec.DAG_CBOR], multihash)
     return { cid, block }
   },
   decode: async (block) => {
@@ -82,7 +82,7 @@ const store = {
     // Save some arbitrary object to our store. When IAMap uses this it's saving a plain object
     // representation of an IAMap node. See IAMap#toSerializable() for information on that form.
     store.stats.saves++
-    let { cid, block } = await store.encode(value)
+    const { cid, block } = await store.encode(value)
     await store.backingDb.put(cid.toBaseEncodedString(), block)
     return cid
   },
@@ -91,7 +91,7 @@ const store = {
   load: async (id) => {
     store.stats.loads++
     assert(CID.isCID(id))
-    let block = await store.backingDb.get(id.toBaseEncodedString())
+    const block = await store.backingDb.get(id.toBaseEncodedString())
     return store.decode(block)
   },
   // Equality test two identifiers, IAMap uses this and because save() returns CIDs we're comparing those
@@ -103,7 +103,7 @@ const store = {
 // Register a murmur3-32 hasher with IAMap
 function murmurHasher (key) {
   // key is a `Buffer`
-  let b = Buffer.alloc(4)
+  const b = Buffer.alloc(4)
   b.writeUInt32LE(murmurhash3.x86.hash32(key))
   // we now have a 4-byte hash
   return b
@@ -113,10 +113,10 @@ iamap.registerHasher('murmur3-32', 32, murmurHasher)
 
 // recursive async iterator that finds and emits all package.json files found from our parent directory downward
 async function * findJs (dir) {
-  let files = await fs.promises.readdir(dir)
-  for (let f of files) {
-    let fp = path.join(dir, f)
-    let stat = await fs.promises.stat(fp)
+  const files = await fs.promises.readdir(dir)
+  for (const f of files) {
+    const fp = path.join(dir, f)
+    const stat = await fs.promises.stat(fp)
     if (stat.isFile() && f.endsWith('.js')) {
       yield fp
     }
@@ -141,7 +141,7 @@ async function * findRequires (dir) {
         transform (line, enc, callback) {
           let match
           while ((match = requireRe.exec(line)) != null) {
-            this.push([ file, match[1] ])
+            this.push([file, match[1]])
           }
           callback()
         }
@@ -170,13 +170,13 @@ async function buildIndex (dir) {
   let map = await createMap()
 
   let c = 0
-  for await (let req of findRequires(dir)) {
+  for await (const req of findRequires(dir)) {
     if (++c % 1000 === 0) {
       process.stdout.write('.')
     }
 
-    let [ file, mod ] = req // findRequires() emits pairs in an array
-    let listId = await map.get(mod)
+    const [file, mod] = req // findRequires() emits pairs in an array
+    const listId = await map.get(mod)
     let list
     if (!listId) { // new module, make a new Set out of a new IAMap
       list = await createMap()
@@ -196,13 +196,13 @@ async function buildIndex (dir) {
 // --search <id> <module>
 async function search (mapId, mod) {
   console.log(`Using database at ${dbLocation}`)
-  let map = await createMap(mapId)
-  let listId = await map.get(mod)
+  const map = await createMap(mapId)
+  const listId = await map.get(mod)
   if (listId) {
     // if `mod` was found, we should now have an ID of a separate IAMap that is used as a Set
-    let list = await createMap(listId)
+    const list = await createMap(listId)
     console.log(`'${mod}' is found in:`)
-    for await (let f of list.keys()) { // we stored files as keys, so only list the keys
+    for await (const f of list.keys()) { // we stored files as keys, so only list the keys
       console.log(`  ${f}`)
     }
   } else {
@@ -213,7 +213,7 @@ async function search (mapId, mod) {
 // --stats <id>
 async function stats (mapId) {
   console.log(`Using database at ${dbLocation}`)
-  let map = await createMap(mapId)
+  const map = await createMap(mapId)
   let size = 0 // could use map.size() for this
   let nodes = 0
   let maxDepth = 0
@@ -221,9 +221,9 @@ async function stats (mapId) {
   let maxUsed
   let files = 0
   // map.ids() gives us IDs of the root node and all of its children
-  for await (let id of map.ids()) {
+  for await (const id of map.ids()) {
     // instantiate a detached node, we wouldn't normally do this and we certainly wouldn't mutate this
-    let node = await createMap(id)
+    const node = await createMap(id)
     nodes++
     if (node.depth > maxDepth) {
       maxDepth = node.depth
@@ -231,9 +231,9 @@ async function stats (mapId) {
     size += node.directEntryCount() // direct entries within buckets of this node (only)
   }
 
-  for await (let entry of map.entries()) { // map.entries() gives us every { key, value } pair in this map
-    let list = await createMap(entry.value) // every value in our map is a CID of a new IAMap used as a Set
-    let listSize = await list.size() // list.size() is the number of entries in this IAMap (Set)
+  for await (const entry of map.entries()) { // map.entries() gives us every { key, value } pair in this map
+    const list = await createMap(entry.value) // every value in our map is a CID of a new IAMap used as a Set
+    const listSize = await list.size() // list.size() is the number of entries in this IAMap (Set)
     files += listSize
     if (listSize > maxUsedCount) {
       maxUsedCount = listSize
