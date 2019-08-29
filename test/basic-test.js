@@ -46,7 +46,7 @@ test('test basic set/get', async (t) => {
     hashAlg: 'murmur3-32',
     bucketSize: 5,
     map: Buffer.from(newMap.map),
-    data: [[[Buffer.from('foo'), 'bar']]]
+    data: [[['foo', 'bar']]]
   })
   t.ok(newMap.map !== 0)
   t.strictEqual(store.map.size, 2)
@@ -80,7 +80,7 @@ test('test basic set/set-same/get', async (t) => {
     hashAlg: 'murmur3-32',
     bucketSize: 5,
     map: Buffer.from(newMap1.map),
-    data: [[[Buffer.from('foo'), 'bar']]]
+    data: [[['foo', 'bar']]]
   })
   t.ok(newMap1.map !== 0)
   t.strictEqual(store.map.size, 2)
@@ -117,14 +117,14 @@ test('test basic set/update/get', async (t) => {
     hashAlg: 'murmur3-32',
     bucketSize: 5,
     map: Buffer.from(newMap1.map),
-    data: [[[Buffer.from('foo'), 'bar']]]
+    data: [[['foo', 'bar']]]
   })
   t.ok(newMap1.map !== 0)
   t.strictDeepEqual(newMap2.toSerializable(), {
     hashAlg: 'murmur3-32',
     bucketSize: 5,
     map: Buffer.from(newMap1.map),
-    data: [[[Buffer.from('foo'), 'baz']]]
+    data: [[['foo', 'baz']]]
   })
   t.ok(newMap2.map !== 0)
   t.strictEqual(store.map.size, 3)
@@ -161,7 +161,7 @@ test('test basic set/get/delete', async (t) => {
     hashAlg: 'murmur3-32',
     bucketSize: 5,
     map: Buffer.from(setMap.map),
-    data: [[[Buffer.from('foo'), 'bar']]]
+    data: [[['foo', 'bar']]]
   })
   // should be back to square one
   t.strictDeepEqual(deleteMap.toSerializable(), map.toSerializable())
@@ -563,4 +563,28 @@ test('test non-store, sync block-by-block keys traversal', async (t) => {
   t.strictDeepEqual([...traversal.keys()], [])
   t.strictDeepEqual([...traversal.values()], [])
   t.strictDeepEqual([...traversal.entries()], [])
+})
+
+// this isn't expected normal usage but it's an option, so we test it
+test('test mixed key type storage', async (t) => {
+  const store = memoryStore()
+  let map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+
+  for (let len = 1; len <= 3; len++) {
+    for (let i = 97; i < 97 + 26; i++) {
+      // ascii alphabet
+      const key = ''.padStart(len, String.fromCharCode(i)) // this makes keys like 'aaa' to 'zzz' (for len=3)
+      map = await map.set(i % 2 === 0 ? key : Buffer.from(key), `${key} value`)
+    }
+  }
+
+  for (let len = 1; len <= 3; len++) {
+    for (let i = 97; i < 97 + 26; i++) {
+      // ascii alphabet
+      const key = ''.padStart(len, String.fromCharCode(i)) // this makes keys like 'aaa' to 'zzz' (for len=3)
+      t.strictEqual(await map.has(key), i % 2 === 0)
+      t.strictEqual(await map.has(Buffer.from(key)), i % 2 !== 0)
+      t.strictEqual(await map.get(i % 2 === 0 ? key : Buffer.from(key)), `${key} value`)
+    }
+  }
 })

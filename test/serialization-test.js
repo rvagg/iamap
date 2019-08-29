@@ -1,5 +1,8 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
+// TODO: this doesn't test full manual serializations and deserializations, there's no manual `data`
+// construction here, only `data: []`.
+
 const { test } = require('tap')
 const { murmurHasher, identityHasher, memoryStore } = require('./common')
 const iamap = require('../')

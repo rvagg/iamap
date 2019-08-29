@@ -230,19 +230,20 @@ class IAMap {
   /**
    * Asynchronously create a new `IAMap` instance identical to this one but with `key` set to `value`.
    *
-   * @param {(string|array|Buffer|ArrayBuffer)} key - A key for the `value` being set whereby that same `value` may
-   * be retrieved with a `get()` operation with the same `key`. The type of the `key` object should either be a
-   * `Buffer` or be convertable to a `Buffer` via [`Buffer.from()`](https://nodejs.org/api/buffer.html).
+   * @param {(string|Buffer|Uint8Array)} key - A key for the `value` being set whereby that same `value` may
+   * be retrieved with a `get()` operation with the same `key`. The `key` will be hashed as a `Buffer` so if it is
+   * a `string` it will first be converted via [`Buffer.from()`](https://nodejs.org/api/buffer.html) for the
+   * purpose of hashing. The `key` will be stored as either a `Buffer` or a `string` and will be the same type when
+   * iterating with `keys()` or `entries()`.
+   * It is recommended that an `IAMap` be used for one type of key only, not mixing types, although this is
+   * possible and should work.
    * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
    * or an address or content address or other kind of link to the actual value.
    * @returns {Promise<IAMap>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
    * @async
    */
   async set (key, value) {
-    if (!Buffer.isBuffer(key)) {
-      key = Buffer.from(key)
-    }
-    const hash = hasher(this)(key)
+    const hash = hasher(this)(Buffer.isBuffer(key) ? key : Buffer.from(key))
     assert(Buffer.isBuffer(hash))
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
@@ -279,8 +280,8 @@ class IAMap {
   /**
    * Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
    *
-   * @param {string|array|Buffer|ArrayBuffer} key - A key for the value being sought. See {@link IAMap#set} for
-   * details about acceptable `key` types.
+   * @param {string|Buffer|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
+   * details about `key` types.
    * @returns {Promise} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
    * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
    * @async
@@ -301,10 +302,10 @@ class IAMap {
   /**
    * Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
    *
-   * @param {string|array|Buffer|ArrayBuffer} key - A key to check for existence within this `IAMap`. See
-   * {@link IAMap#set} for details about acceptable `key` types.
-   * @returns {Promise<boolean>} A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
-   * within this `IAMap`.
+   * @param {string|Buffer|Uint8Array} key - A key to check for existence within this `IAMap`. See
+   * {@link IAMap#set} for details about `key` types.
+   * @returns {Promise<boolean>} A `Promise` that resolves to either `true` or `false` depending on whether the `key`
+   * exists within this `IAMap`.
    * @async
    */
   async has (key) {
@@ -315,17 +316,14 @@ class IAMap {
    * Asynchronously create a new `IAMap` instance identical to this one but with `key` and its associated
    * value removed. If the `key` does not exist within this `IAMap`, this instance of `IAMap` is returned.
    *
-   * @param {string|array|Buffer|ArrayBuffer} key - A key to remove. See {@link IAMap#set} for details about
-   * acceptable `key` types.
-   * @returns {Promise<IAMap>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
-   * instance if `key` does not exist within it.
+   * @param {string|Buffer|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
+   * `key` types.
+   * @returns {Promise<IAMap>} A `Promise` that resolves to a new `IAMap` instance without the given `key`
+   * or the same `IAMap` instance if `key` does not exist within it.
    * @async
    */
   async delete (key) {
-    if (!Buffer.isBuffer(key)) {
-      key = Buffer.from(key)
-    }
-    const hash = hasher(this)(key)
+    const hash = hasher(this)(Buffer.isBuffer(key) ? key : Buffer.from(key))
     assert(Buffer.isBuffer(hash))
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
@@ -408,8 +406,8 @@ class IAMap {
    * Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
    * traversal of all nodes.
    *
-   * @returns {AsyncIterator} An async iterator that yields keys. All keys will be in `Buffer` format regardless of which
-   * format they were inserted via `set()`.
+   * @returns {AsyncIterator} An async iterator that yields keys. Keys will be in either `Buffer` or `string` form,
+   * depending on how they were inserted by `set()`.
    * @async
    */
   async * keys () {
@@ -488,8 +486,8 @@ class IAMap {
    *
    * Where `data` is an array of a mix of either buckets or links:
    *
-   * * A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
-   *   or whatever type has been provided in `set()` operations for this `IAMap`.
+   * * A bucket is an array of two elements, the first being a `key` of type `Buffer` or `string` and the second a `value`
+   *   or whatever types have been provided in `set()` operations for this `IAMap`.
    * * A link is an object of the type that the backing store provides upon `save()` operations and can be identified
    *   with `isLink()` calls.
    *
@@ -597,7 +595,8 @@ function findElement (node, bitpos, key) {
   if (element.bucket) { // data element
     for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
       const bucketEntry = element.bucket[bucketIndex]
-      if (bucketEntry.key.equals(key)) {
+      // string compare or Buffer compare
+      if (bucketEntry.key === key || (Buffer.isBuffer(bucketEntry.key) && Buffer.isBuffer(key) && bucketEntry.key.equals(key))) {
         return { data: { found: true, elementAt, element, bucketIndex, bucketEntry } }
       }
     }
@@ -624,13 +623,25 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   if (bucketAt === -1) {
     newElement.bucket.push(newKv)
     // in-bucket sort is required to maintain a canonical state
-    newElement.bucket.sort((a, b) => Buffer.compare(a.key, b.key))
+    sortBucket(newElement.bucket)
   } else {
     newElement.bucket[bucketAt] = newKv
   }
   const newData = node.data.slice()
   newData[elementAt] = newElement
   return create(node.store, node.config, node.map, node.depth, newData)
+}
+
+function sortBucket (bucket) {
+  // sort by bytes if we have a Buffer or mixed bucket, sort by strings if we have strings only
+  const bufferCompare = bucket.findIndex((e) => Buffer.isBuffer(e.key)) > -1
+  bucket.sort(bufferCompare ? (a, b) => {
+    const ak = Buffer.isBuffer(a.key) ? a.key : Buffer.from(a.key)
+    const bk = Buffer.isBuffer(b.key) ? b.key : Buffer.from(b.key)
+    return Buffer.compare(ak, bk)
+  } : (a, b) => {
+    return a.key < b.key ? -1 : 1 // don't bother with the === case, we shouldn't have duplicate keys!
+  })
 }
 
 // overflow of a bucket means it has to be replaced with a child node, tricky surgery
@@ -676,7 +687,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
       return p.concat(c.bucket)
     }
   }, [])
-  newBucket.sort((a, b) => Buffer.compare(a.key, b.key))
+  sortBucket(newBucket)
   const newElement = new Element(newBucket)
   return create(node.store, node.config, newMap, 0, [newElement])
 }
@@ -764,11 +775,11 @@ class GetTraversal {
   constructor (rootBlock, key, isEqual, isLink, depth) {
     const isIAMap = IAMap.isIAMap(rootBlock)
     this._config = isIAMap ? rootBlock.config : serializableToOptions(rootBlock)
-    this._key = Buffer.isBuffer(key) ? key : Buffer.from(key)
+    this._key = key
     this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
 
     this._store = Object.assign(dummyStore, { isEqual, isLink })
-    this._hash = hasherRegistry[this._config.hashAlg].hasher(this._key)
+    this._hash = hasherRegistry[this._config.hashAlg].hasher(Buffer.isBuffer(key) ? key : Buffer.from(key))
     assert(Buffer.isBuffer(this._hash))
     this._node = isIAMap ? rootBlock : fromSerializable(this._store, 0, rootBlock, rootBlock, depth)
     this._value = undefined
@@ -822,8 +833,8 @@ class GetTraversal {
  * @name iamap.traverseGet
  * @function
  * @param {Object} rootBlock The root block, for extracting the IAMap configuration data
- * @param {string|array|Buffer|ArrayBuffer} key a key to get. See {@link IAMap#get} for details about
- * acceptable `key` types.
+ * @param {string|Buffer|Uint8Array} key a key to get. See {@link IAMap#get} for details about
+ * `key` types.
  * @param {function} isEqual A function that compares two identifiers in the data store. See
  * {@link iamap.create} for details on the backing store and the requirements of an `isEqual()` function.
  * @param {function} isLink A function that can discern if an object is a link type used by the data store. See
@@ -907,7 +918,7 @@ class EntriesTraversal {
   /**
    * An iterator providing all of the keys in the current IAMap node being traversed.
    *
-   * @returns {Iterator} An iterator that yields keys in `Buffer` form (regardless of how they were set).
+   * @returns {Iterator} An iterator that yields `Buffer` or `string` keys (whatever type they were `set()` as).
    */
   * keys () {
     for (const kv of this._visit()) {

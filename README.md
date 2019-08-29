@@ -236,9 +236,13 @@ Asynchronously create a new `IAMap` instance identical to this one but with `key
 
 **Parameters:**
 
-* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key for the `value` being set whereby that same `value` may
-  be retrieved with a `get()` operation with the same `key`. The type of the `key` object should either be a
-  `Buffer` or be convertable to a `Buffer` via [`Buffer.from()`](https://nodejs.org/api/buffer.html).
+* **`key`** _(`string|Buffer|Uint8Array`)_: A key for the `value` being set whereby that same `value` may
+  be retrieved with a `get()` operation with the same `key`. The `key` will be hashed as a `Buffer` so if it is
+  a `string` it will first be converted via [`Buffer.from()`](https://nodejs.org/api/buffer.html) for the
+  purpose of hashing. The `key` will be stored as either a `Buffer` or a `string` and will be the same type when
+  iterating with `keys()` or `entries()`.
+  It is recommended that an `IAMap` be used for one type of key only, not mixing types, although this is
+  possible and should work.
 * **`value`** _(`any`)_: Any value that can be stored in the backing store. A value could be a serialisable object
   or an address or content address or other kind of link to the actual value.
 
@@ -251,8 +255,8 @@ Asynchronously find and return a value for the given `key` if it exists within t
 
 **Parameters:**
 
-* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key for the value being sought. See [`IAMap#set`](#IAMap_set) for
-  details about acceptable `key` types.
+* **`key`** _(`string|Buffer|Uint8Array`)_: A key for the value being sought. See [`IAMap#set`](#IAMap_set) for
+  details about `key` types.
 
 **Return value**  _(`Promise`)_: A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
   key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
@@ -264,11 +268,11 @@ Asynchronously find and return a boolean indicating whether the given `key` exis
 
 **Parameters:**
 
-* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key to check for existence within this `IAMap`. See
-  [`IAMap#set`](#IAMap_set) for details about acceptable `key` types.
+* **`key`** _(`string|Buffer|Uint8Array`)_: A key to check for existence within this `IAMap`. See
+  [`IAMap#set`](#IAMap_set) for details about `key` types.
 
-**Return value**  _(`Promise.<boolean>`)_: A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
-  within this `IAMap`.
+**Return value**  _(`Promise.<boolean>`)_: A `Promise` that resolves to either `true` or `false` depending on whether the `key`
+  exists within this `IAMap`.
 
 <a name="IAMap_delete"></a>
 ### `async IAMap#delete(key)`
@@ -278,11 +282,11 @@ value removed. If the `key` does not exist within this `IAMap`, this instance of
 
 **Parameters:**
 
-* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
-  acceptable `key` types.
+* **`key`** _(`string|Buffer|Uint8Array`)_: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
+  `key` types.
 
-**Return value**  _(`Promise.<IAMap>`)_: A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
-  instance if `key` does not exist within it.
+**Return value**  _(`Promise.<IAMap>`)_: A `Promise` that resolves to a new `IAMap` instance without the given `key`
+  or the same `IAMap` instance if `key` does not exist within it.
 
 <a name="IAMap_size"></a>
 ### `async IAMap#size()`
@@ -297,8 +301,8 @@ Asynchronously count the number of key/value pairs contained within this `IAMap`
 Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
 traversal of all nodes.
 
-**Return value**  _(`AsyncIterator`)_: An async iterator that yields keys. All keys will be in `Buffer` format regardless of which
-  format they were inserted via `set()`.
+**Return value**  _(`AsyncIterator`)_: An async iterator that yields keys. Keys will be in either `Buffer` or `string` form,
+  depending on how they were inserted by `set()`.
 
 <a name="IAMap_values"></a>
 ### `async IAMap#values()`
@@ -360,8 +364,8 @@ Intermediate and leaf node form:
 
 Where `data` is an array of a mix of either buckets or links:
 
-* A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
-  or whatever type has been provided in `set()` operations for this `IAMap`.
+* A bucket is an array of two elements, the first being a `key` of type `Buffer` or `string` and the second a `value`
+  or whatever types have been provided in `set()` operations for this `IAMap`.
 * A link is an object of the type that the backing store provides upon `save()` operations and can be identified
   with `isLink()` calls.
 
@@ -452,8 +456,8 @@ traversals block-by-block.
 **Parameters:**
 
 * **`rootBlock`** _(`Object`)_: The root block, for extracting the IAMap configuration data
-* **`key`** _(`string|array|Buffer|ArrayBuffer`)_: a key to get. See [`IAMap#get`](#IAMap_get) for details about
-  acceptable `key` types.
+* **`key`** _(`string|Buffer|Uint8Array`)_: a key to get. See [`IAMap#get`](#IAMap_get) for details about
+  `key` types.
 * **`isEqual`** _(`function`)_: A function that compares two identifiers in the data store. See
   [`iamap.create`](#iamap__create) for details on the backing store and the requirements of an `isEqual()` function.
 * **`isLink`** _(`function`)_: A function that can discern if an object is a link type used by the data store. See
@@ -491,7 +495,7 @@ Provide the next block required for traversal.
 
 An iterator providing all of the keys in the current IAMap node being traversed.
 
-**Return value**  _(`Iterator`)_: An iterator that yields keys in `Buffer` form (regardless of how they were set).
+**Return value**  _(`Iterator`)_: An iterator that yields `Buffer` or `string` keys (whatever type they were `set()` as).
 
 <a name="EntriesTraversal_values"></a>
 ### `EntriesTraversal#values()`
