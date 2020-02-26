@@ -188,7 +188,7 @@ class IAMap {
         typeof store.load !== 'function' ||
         typeof store.isLink !== 'function' ||
         typeof store.isEqual !== 'function') {
-      throw new TypeError('Invalid `store` option, must be of type: { save(node):id, load(id):node, isEqual(id,id):boolean }')
+      throw new TypeError('Invalid `store` option, must be of type: { save(node):id, load(id):node, isEqual(id,id):boolean, isLink(obj):boolean  }')
     }
     ro(this, 'store', store)
 
