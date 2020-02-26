@@ -1061,3 +1061,4 @@ module.exports.traverseEntries = traverseEntries
 module.exports.fromSerializable = fromSerializable
 module.exports.isSerializable = isSerializable
 module.exports.isRootSerializable = isRootSerializable
+module.exports.IAMap = IAMap
