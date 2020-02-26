@@ -3,10 +3,7 @@
 
 const assert = require('assert')
 const { mask, setBit, bitmapHas, index } = require('./bit-utils')
-const multicodec = {
-  codes: require('multicodec/src/base-table'),
-  names: require('multicodec/src/name-table')
-}
+const codecNames = new Set(Object.keys(require('multicodec/src/base-table.json')))
 
 const defaultBitWidth = 8 // 2^8 = 256 buckets or children per node
 const defaultBucketSize = 5 // array size for a bucket of values
@@ -98,7 +95,7 @@ async function load (store, id, depth = 0, options) {
  * Map and returns a `Buffer` (or a `Buffer`-like, such that each data element of the array contains a single byte value).
  */
 function registerHasher (hashAlg, hashBytes, hasher) {
-  if (!multicodec.codes[hashAlg]) {
+  if (!codecNames.has(hashAlg)) {
     throw new TypeError(`hashAlg '${hashAlg}' is not in the multicodec database`)
   }
   if (typeof hashBytes !== 'number') {
