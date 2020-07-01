@@ -198,7 +198,8 @@ class IAMap {
     const hashBytes = hasherRegistry[options.hashAlg].hashBytes
 
     if (map !== undefined && !Buffer.isBuffer(map)) {
-      throw new TypeError('`map` must be a Buffer')
+      if (map instanceof Uint8Array) map = Buffer.from(map)
+      else throw new TypeError('`map` must be a Buffer')
     }
     const mapLength = Math.ceil(Math.pow(2, this.config.bitWidth) / 8)
     if (map !== undefined && map.length !== mapLength) {
@@ -594,6 +595,8 @@ function findElement (node, bitpos, key) {
   if (element.bucket) { // data element
     for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
       const bucketEntry = element.bucket[bucketIndex]
+      const _key = bucketEntry.key
+      if (!Buffer.isBuffer(_key) && _key instanceof Uint8Array) bucketEntry.key = Buffer.from(_key)
       if (bucketEntry.key.equals(key)) {
         return { data: { found: true, elementAt, element, bucketIndex, bucketEntry } }
       }
@@ -991,7 +994,7 @@ function isRootSerializable (serializable) {
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
 function isSerializable (serializable) {
-  return Array.isArray(serializable.data) && Buffer.isBuffer(serializable.map)
+  return Array.isArray(serializable.data) && serializable.map instanceof Uint8Array
 }
 
 /**
