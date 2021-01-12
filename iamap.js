@@ -198,7 +198,7 @@ class IAMap {
     const hashBytes = hasherRegistry[options.hashAlg].hashBytes
 
     if (map !== undefined && !Buffer.isBuffer(map)) {
-      /* istanbul ignore next 3 */
+      /* c8 ignore next 3 */
       if (map instanceof Uint8Array) {
         map = Buffer.from(map)
       } else {
@@ -600,7 +600,7 @@ function findElement (node, bitpos, key) {
     for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
       const bucketEntry = element.bucket[bucketIndex]
       const _key = bucketEntry.key
-      /* istanbul ignore next 3 */
+      /* c8 ignore next 3 */
       if (!Buffer.isBuffer(_key) && _key instanceof Uint8Array) {
         bucketEntry.key = Buffer.from(_key)
       }
@@ -760,7 +760,7 @@ function buildConfig (options) {
   return config
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 const dummyStore = { load () {}, save () {}, isEqual () { return false }, isLink () { return false } }
 
 /**
@@ -861,7 +861,7 @@ class EntriesTraversal {
 
   _nextLink (node, start) {
     let next = start
-    for (; next < node.data.length && !node.data[next].link; next++) {}
+    for (; next < node.data.length && !node.data[next].link; next++) {} // eslint-disable-line
     return next === node.data.length ? -1 : next
   }
 

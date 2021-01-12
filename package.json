@@ -4,8 +4,11 @@
   "description": "An **I**mmutable **A**synchronous **Map**.",
   "main": "iamap.js",
   "scripts": {
-    "test": "tap test/*-test.js --cov --100",
-    "coverage": "tap test/*-test.js --cov --coverage-report=html",
+    "lint": "standard *.js test/*.js",
+    "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/*-test.js",
+    "test:browser": "polendina --page --worker --serviceworker --cleanup test/*-test.js",
+    "test": "npm run lint && npm run test:node && npm run test:browser",
+    "coverage": "c8 --reporter=html mocha test/*-test.js && npx st -d coverage -p 8080",
     "docs": "jsdoc4readme --readme iamap.js"
   },
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
@@ -15,9 +18,14 @@
     "multicodec": "^2.1.0"
   },
   "devDependencies": {
+    "c8": "^7.4.0",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
     "jsdoc4readme": "^1.4.0",
+    "mocha": "^8.2.1",
     "murmurhash3js-revisited": "^3.0.0",
-    "tap": "^14.11.0"
+    "polendina": "^1.1.0",
+    "standard": "^16.0.3"
   },
   "repository": {
     "type": "git",
