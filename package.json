@@ -1,6 +1,6 @@
 {
   "name": "iamap",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "description": "An **I**mmutable **A**synchronous **Map**.",
   "main": "iamap.js",
   "scripts": {
