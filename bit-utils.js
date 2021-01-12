@@ -13,14 +13,14 @@ function setBit (bitmap, position, set) {
   const offset = position % 8
   const has = bitmapHas(bitmap, undefined, byte, offset)
   if ((set && !has) || (!set && has)) {
-    const newBitmap = Buffer.from(bitmap)
+    const newBitmap = Uint8Array.from(bitmap)
     let b = bitmap[byte]
     if (set) {
       b |= (1 << offset)
     } else {
       b ^= (1 << offset)
     }
-    newBitmap.writeUInt8(b, byte)
+    newBitmap[byte] = b
     return newBitmap
   }
   return bitmap
