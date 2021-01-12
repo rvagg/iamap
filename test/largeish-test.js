@@ -10,6 +10,7 @@ iamap.registerHasher('murmur3-32', 32, murmurHasher)
 
 const PEAK = 100 // not huge but delete is super expensive
 
+const textDecoder = new TextDecoder()
 const store = memoryStore() // same store across tests
 let loadId
 const keys = []
@@ -23,7 +24,7 @@ describe('Large(ish)', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 'murmur3-32',
       bucketSize: 5,
-      map: Buffer.alloc((2 ** 8) / 8),
+      map: new Uint8Array((2 ** 8) / 8),
       data: []
     })
     assert.strictEqual(store.map.size, 1)
@@ -59,7 +60,7 @@ describe('Large(ish)', () => {
 
     const actualKeys = []
     for await (const k of map.keys()) {
-      actualKeys.push(k.toString())
+      actualKeys.push(textDecoder.decode(k))
     }
     const actualValues = []
     for await (const v of map.values()) {
@@ -67,7 +68,7 @@ describe('Large(ish)', () => {
     }
     const actualEntries = []
     for await (const e of map.entries()) {
-      actualEntries.push(JSON.stringify({ key: e.key.toString(), value: e.value }))
+      actualEntries.push(JSON.stringify({ key: textDecoder.decode(e.key), value: e.value }))
     }
 
     keys.sort()

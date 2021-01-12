@@ -22,7 +22,7 @@ function memoryStore () {
   // normally perform this function for you.
   function hash (obj) {
     const stringified = JSON.stringify(obj)
-    const buf = Buffer.from(stringified) // murmurhash3js-revisited takes bytes[]
+    const buf = new TextEncoder().encode(stringified) // murmurhash3js-revisited takes bytes[]
     return murmurhash3.x86.hash32(buf) // returns an number
   }
   const map = new Map() // where objects get stored
@@ -49,12 +49,13 @@ function memoryStore () {
 }
 
 // IAMap doesn't know how to produce a hash for keys by itself, it needs a hash function. We do that by passing in
-// a hash function via `registerHasher()`. The hash function should work on an array of bytes (`Buffer`) and return
+// a hash function via `registerHasher()`. The hash function should work on an array of bytes (`Uint8Array`) and return
 // an array of bytes whose length matches the `hashLength` that we provide to `registerHasher()`.
 function murmurHasher (key) {
-  // key is a `Buffer`
-  const b = Buffer.alloc(4)
-  b.writeUInt32LE(murmurhash3.x86.hash32(key))
+  // key is a `Uint8Array`
+  const b = new Uint8Array(4)
+  const view = new DataView(b.buffer)
+  view.setUint32(0, murmurhash3.x86.hash32(key), true)
   // we now have a 4-byte hash
   return b
 }

@@ -22,7 +22,7 @@ describe('Serialization', () => {
     const emptySerialized = {
       hashAlg: 'murmur3-32',
       bucketSize: 5,
-      map: Buffer.alloc((2 ** 8) / 8),
+      map: new Uint8Array((2 ** 8) / 8),
       data: []
     }
 
@@ -39,7 +39,7 @@ describe('Serialization', () => {
     const emptySerialized = {
       hashAlg: 'identity', // identity
       bucketSize: 3,
-      map: Buffer.alloc(2 ** 8 / 8),
+      map: new Uint8Array(2 ** 8 / 8),
       data: []
     }
     const id = await store.save(emptySerialized)
@@ -49,15 +49,15 @@ describe('Serialization', () => {
     assert.strictEqual(map.config.hashAlg, 'identity')
     assert.strictEqual(map.config.bitWidth, 8)
     assert.strictEqual(map.config.bucketSize, 3)
-    assert.strictEqual(map.map.toString('hex'), Buffer.alloc(2 ** 8 / 8).toString('hex'))
+    assert.strictEqual(map.map.toString('hex'), new Uint8Array(2 ** 8 / 8).toString('hex'))
     assert.ok(Array.isArray(map.data))
     assert.strictEqual(map.data.length, 0)
   })
 
   it('child custom', async () => {
     const store = memoryStore()
-    const dmap = Buffer.alloc(2 ** 7 / 8)
-    dmap.writeUInt8(0b110011, 5)
+    const dmap = new Uint8Array(2 ** 7 / 8)
+    dmap[5] = 0b110011
     const emptySerialized = {
       map: dmap,
       data: []
@@ -82,7 +82,7 @@ describe('Serialization', () => {
 
   it('malformed', async () => {
     const store = memoryStore()
-    const emptyMap = Buffer.alloc(2 ** 8 / 8)
+    const emptyMap = new Uint8Array(2 ** 8 / 8)
     let emptySerialized = {
       hashAlg: 'sha2-256', // not registered
       bucketSize: 3,
@@ -130,8 +130,8 @@ describe('Serialization', () => {
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
-    const mapCopy = Buffer.from(emptyMap)
-    mapCopy.writeUInt8(0b110011, 0)
+    const mapCopy = Uint8Array.from(emptyMap)
+    mapCopy[0] = 0b110011
     emptySerialized = {
       map: mapCopy,
       data: []
@@ -159,7 +159,7 @@ describe('Serialization', () => {
       }, 'foobar')
     })
 
-    assert.throws(() => new Constructor(store, { hashAlg: 'identity', bitWidth: 8 }, Buffer.alloc(2 ** 8 / 8), 0, [{ nope: 'nope' }]))
+    assert.throws(() => new Constructor(store, { hashAlg: 'identity', bitWidth: 8 }, new Uint8Array(2 ** 8 / 8), 0, [{ nope: 'nope' }]))
   })
 
   it('fromChildSerializable', async () => {
@@ -168,11 +168,11 @@ describe('Serialization', () => {
     const emptySerializedRoot = {
       hashAlg: 'identity',
       bucketSize: 3,
-      map: Buffer.alloc(2 ** 8 / 8),
+      map: new Uint8Array(2 ** 8 / 8),
       data: []
     }
-    const childMap = Buffer.alloc(2 ** 8 / 8)
-    childMap.writeUInt8(0b110011, 4)
+    const childMap = new Uint8Array(2 ** 8 / 8)
+    childMap[4] = 0b110011
     const emptySerializedChild = {
       map: childMap,
       data: []
@@ -206,8 +206,8 @@ describe('Serialization', () => {
 
   it('bad loads', async () => {
     const store = memoryStore()
-    const map = Buffer.alloc(2 ** 8 / 8)
-    map.writeUInt8(0b110011, 4)
+    const map = new Uint8Array(2 ** 8 / 8)
+    map[4] = 0b110011
 
     const emptySerialized = {
       map: map,

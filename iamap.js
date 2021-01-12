@@ -10,6 +10,8 @@ const defaultBucketSize = 5 // array size for a bucket of values
 
 const hasherRegistry = {}
 
+const textEncoder = new TextEncoder()
+
 /**
  * ```js
  * let map = await iamap.create(store, options)
@@ -91,8 +93,8 @@ async function load (store, id, depth = 0, options) {
  * @param {string} hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
  * function identifier, e.g. `'murmur3-32'`.
  * @param {number} hashBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
- * @param {function} hasher - A hash function that takes a `Buffer` derived from the `key` values used for this
- * Map and returns a `Buffer` (or a `Buffer`-like, such that each data element of the array contains a single byte value).
+ * @param {function} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
+ * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value).
  */
 function registerHasher (hashAlg, hashBytes, hasher) {
   if (!codecNames.has(hashAlg)) {
@@ -169,7 +171,7 @@ Element.fromSerializable = function (isLink, obj) {
  * @property {number} config.bitWidth - The number of bits used at each level of this `IAMap`. See {@link iamap.create}
  * for more details.
  * @property {number} config.bucketSize - TThe maximum number of collisions acceptable at each level of the Map.
- * @property {Buffer} [map=Buffer] - Bitmap indicating which slots are occupied by data entries or child node links,
+ * @property {Uint8Array} [map=Uint8Array] - Bitmap indicating which slots are occupied by data entries or child node links,
  * each data entry contains an bucket of entries. Must be the appropriate size for `config.bitWidth`
  * (`2 ** config.bitWith / 8` bytes).
  * @property {number} [depth=0] - Depth of the current node in the IAMap, `depth` is used to extract bits from the
@@ -197,19 +199,14 @@ class IAMap {
 
     const hashBytes = hasherRegistry[options.hashAlg].hashBytes
 
-    if (map !== undefined && !Buffer.isBuffer(map)) {
-      /* c8 ignore next 3 */
-      if (map instanceof Uint8Array) {
-        map = Buffer.from(map)
-      } else {
-        throw new TypeError('`map` must be a Uint8Array')
-      }
+    if (map !== undefined && !(map instanceof Uint8Array)) {
+      throw new TypeError('`map` must be a Uint8Array')
     }
     const mapLength = Math.ceil(Math.pow(2, this.config.bitWidth) / 8)
     if (map !== undefined && map.length !== mapLength) {
-      throw new Error('`map` must be a Buffer of length ' + mapLength)
+      throw new Error('`map` must be a Uint8Array of length ' + mapLength)
     }
-    ro(this, 'map', map || Buffer.alloc(mapLength))
+    ro(this, 'map', map || new Uint8Array(mapLength))
 
     if (depth !== undefined && (!Number.isInteger(depth) || depth < 0)) {
       throw new TypeError('`depth` must be an integer >= 0')
@@ -232,20 +229,20 @@ class IAMap {
   /**
    * Asynchronously create a new `IAMap` instance identical to this one but with `key` set to `value`.
    *
-   * @param {(string|array|Buffer|ArrayBuffer)} key - A key for the `value` being set whereby that same `value` may
+   * @param {(string|array|Uint8Array)} key - A key for the `value` being set whereby that same `value` may
    * be retrieved with a `get()` operation with the same `key`. The type of the `key` object should either be a
-   * `Buffer` or be convertable to a `Buffer` via [`Buffer.from()`](https://nodejs.org/api/buffer.html).
+   * `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
    * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
    * or an address or content address or other kind of link to the actual value.
    * @returns {Promise<IAMap>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
    * @async
    */
   async set (key, value) {
-    if (!Buffer.isBuffer(key)) {
-      key = Buffer.from(key)
+    if (!(key instanceof Uint8Array)) {
+      key = textEncoder.encode(key)
     }
     const hash = hasher(this)(key)
-    assert(Buffer.isBuffer(hash))
+    assert(hash instanceof Uint8Array)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
@@ -281,7 +278,7 @@ class IAMap {
   /**
    * Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
    *
-   * @param {string|array|Buffer|ArrayBuffer} key - A key for the value being sought. See {@link IAMap#set} for
+   * @param {string|array|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
    * details about acceptable `key` types.
    * @returns {Promise} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
    * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
@@ -303,7 +300,7 @@ class IAMap {
   /**
    * Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
    *
-   * @param {string|array|Buffer|ArrayBuffer} key - A key to check for existence within this `IAMap`. See
+   * @param {string|array|Uint8Array} key - A key to check for existence within this `IAMap`. See
    * {@link IAMap#set} for details about acceptable `key` types.
    * @returns {Promise<boolean>} A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
    * within this `IAMap`.
@@ -317,18 +314,18 @@ class IAMap {
    * Asynchronously create a new `IAMap` instance identical to this one but with `key` and its associated
    * value removed. If the `key` does not exist within this `IAMap`, this instance of `IAMap` is returned.
    *
-   * @param {string|array|Buffer|ArrayBuffer} key - A key to remove. See {@link IAMap#set} for details about
+   * @param {string|array|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
    * acceptable `key` types.
    * @returns {Promise<IAMap>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
    * instance if `key` does not exist within it.
    * @async
    */
   async delete (key) {
-    if (!Buffer.isBuffer(key)) {
-      key = Buffer.from(key)
+    if (!(key instanceof Uint8Array)) {
+      key = textEncoder.encode(key)
     }
     const hash = hasher(this)(key)
-    assert(Buffer.isBuffer(hash))
+    assert(hash instanceof Uint8Array)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
@@ -410,7 +407,7 @@ class IAMap {
    * Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
    * traversal of all nodes.
    *
-   * @returns {AsyncIterator} An async iterator that yields keys. All keys will be in `Buffer` format regardless of which
+   * @returns {AsyncIterator} An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
    * format they were inserted via `set()`.
    * @async
    */
@@ -468,14 +465,14 @@ class IAMap {
    * root nodes contain the full set of data and intermediate and leaf nodes contain just the required data.
    * For content addressable backing stores, it is expected that the same data in this serialisable form will always produce
    * the same identifier.
-   * Note that the `map` property is a `Buffer` so will need special handling for some serialization forms (e.g. JSON).
+   * Note that the `map` property is a `Uint8Array` so will need special handling for some serialization forms (e.g. JSON).
    *
    * Root node form:
    * ```
    * {
    *   hashAlg: string
    *   bucketSize: number
-   *   map: Buffer
+   *   map: Uint8Array
    *   data: Array
    * }
    * ```
@@ -483,14 +480,14 @@ class IAMap {
    * Intermediate and leaf node form:
    * ```
    * {
-   *   map: Buffer
+   *   map: Uint8Array
    *   data: Array
    * }
    * ```
    *
    * Where `data` is an array of a mix of either buckets or links:
    *
-   * * A bucket is an array of two elements, the first being a `key` of type `Buffer` and the second a `value`
+   * * A bucket is an array of two elements, the first being a `key` of type `Uint8Array` and the second a `value`
    *   or whatever type has been provided in `set()` operations for this `IAMap`.
    * * A link is an object of the type that the backing store provides upon `save()` operations and can be identified
    *   with `isLink()` calls.
@@ -599,12 +596,7 @@ function findElement (node, bitpos, key) {
   if (element.bucket) { // data element
     for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
       const bucketEntry = element.bucket[bucketIndex]
-      const _key = bucketEntry.key
-      /* c8 ignore next 3 */
-      if (!Buffer.isBuffer(_key) && _key instanceof Uint8Array) {
-        bucketEntry.key = Buffer.from(_key)
-      }
-      if (bucketEntry.key.equals(key)) {
+      if (byteCompare(bucketEntry.key, key) === 0) {
         return { data: { found: true, elementAt, element, bucketIndex, bucketEntry } }
       }
     }
@@ -631,7 +623,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   if (bucketAt === -1) {
     newElement.bucket.push(newKv)
     // in-bucket sort is required to maintain a canonical state
-    newElement.bucket.sort((a, b) => Buffer.compare(a.key, b.key))
+    newElement.bucket.sort((a, b) => byteCompare(a.key, b.key))
   } else {
     newElement.bucket[bucketAt] = newKv
   }
@@ -668,7 +660,7 @@ async function updateNode (node, elementAt, key, newChild) {
 // bucket; used for collapsing a node and sending it upward
 function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
-  const newMap = setBit(Buffer.alloc(node.map.length), mask(hash, 0, node.config.bitWidth), 1)
+  const newMap = setBit(new Uint8Array(node.map.length), mask(hash, 0, node.config.bitWidth), 1)
   const newBucket = node.data.reduce((p, c, i) => {
     if (i === elementAt) {
       if (c.bucket.length === 1) { // only element in bucket, skip it
@@ -683,7 +675,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
       return p.concat(c.bucket)
     }
   }, [])
-  newBucket.sort((a, b) => Buffer.compare(a.key, b.key))
+  newBucket.sort((a, b) => byteCompare(a.key, b.key))
   const newElement = new Element(newBucket)
   return create(node.store, node.config, newMap, 0, [newElement])
 }
@@ -771,12 +763,12 @@ class GetTraversal {
   constructor (rootBlock, key, isEqual, isLink, depth) {
     const isIAMap = IAMap.isIAMap(rootBlock)
     this._config = isIAMap ? rootBlock.config : serializableToOptions(rootBlock)
-    this._key = Buffer.isBuffer(key) ? key : Buffer.from(key)
+    this._key = key instanceof Uint8Array ? key : textEncoder.encode(key)
     this._depth = Number.isInteger(depth) && depth >= 0 ? depth : 0 // only needed if we start mid-tree
 
     this._store = Object.assign(dummyStore, { isEqual, isLink })
     this._hash = hasherRegistry[this._config.hashAlg].hasher(this._key)
-    assert(Buffer.isBuffer(this._hash))
+    assert(this._hash instanceof Uint8Array)
     this._node = isIAMap ? rootBlock : fromSerializable(this._store, 0, rootBlock, rootBlock, depth)
     this._value = undefined
   }
@@ -829,7 +821,7 @@ class GetTraversal {
  * @name iamap.traverseGet
  * @function
  * @param {Object} rootBlock The root block, for extracting the IAMap configuration data
- * @param {string|array|Buffer|ArrayBuffer} key a key to get. See {@link IAMap#get} for details about
+ * @param {string|array|Uint8Array} key a key to get. See {@link IAMap#get} for details about
  * acceptable `key` types.
  * @param {function} isEqual A function that compares two identifiers in the data store. See
  * {@link iamap.create} for details on the backing store and the requirements of an `isEqual()` function.
@@ -914,7 +906,7 @@ class EntriesTraversal {
   /**
    * An iterator providing all of the keys in the current IAMap node being traversed.
    *
-   * @returns {Iterator} An iterator that yields keys in `Buffer` form (regardless of how they were set).
+   * @returns {Iterator} An iterator that yields keys in `Uint8Array` form (regardless of how they were set).
    */
   * keys () {
     for (const kv of this._visit()) {
@@ -1061,6 +1053,16 @@ function ro (obj, prop, value) {
 // internal utility to fetch a map instance's hash function
 function hasher (map) {
   return hasherRegistry[map.config.hashAlg].hasher
+}
+
+function byteCompare (b1, b2) {
+  for (let i = 0; i < b1.length; i++) {
+    if (b1[i] === b2[i]) {
+      continue
+    }
+    return b1[i] < b2[i] ? -1 : 1
+  } /* c8 ignore next 3 */
+  return 0
 }
 
 module.exports.create = create

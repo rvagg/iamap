@@ -105,8 +105,8 @@ const store = {
 
 // Register a murmur3-32 hasher with IAMap
 function murmurHasher (key) {
-  // key is a `Buffer`
-  const b = Buffer.alloc(4)
+  // key is a `Uint8Array`
+  const b = new Uint8Array(4)
   b.writeUInt32LE(murmurhash3.x86.hash32(key))
   // we now have a 4-byte hash
   return b

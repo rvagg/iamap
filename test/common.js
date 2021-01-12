@@ -4,20 +4,21 @@ const murmurhash3 = require('murmurhash3js-revisited')
 const assert = require('assert')
 
 function murmurHasher (key) {
-  assert(Buffer.isBuffer(key))
-  const b = Buffer.alloc(4)
-  b.writeUInt32LE(murmurhash3.x86.hash32(key))
+  assert(key instanceof Uint8Array)
+  const b = new Uint8Array(4)
+  const view = new DataView(b.buffer)
+  view.setUint32(0, murmurhash3.x86.hash32(key), true)
   return b
 }
 
 // probably best not to use this for real applications, unless your keys have the qualities of hashes
 function identityHasher (key) {
-  assert(Buffer.isBuffer(key))
+  assert(key instanceof Uint8Array)
   return key
 }
 
 function hash (obj) {
-  return murmurhash3.x86.hash32(Buffer.from(JSON.stringify(obj)))
+  return murmurhash3.x86.hash32(new TextEncoder().encode(JSON.stringify(obj)))
 }
 
 // simple util to generate stable content IDs for objects, this is not necessarily how
@@ -48,6 +49,42 @@ function memoryStore () {
   }
 }
 
+function toBytes (obj) {
+  if (obj instanceof Uint8Array && obj.constructor.name === 'Uint8Array') {
+    return obj
+  }
+  if (obj instanceof ArrayBuffer) {
+    return new Uint8Array(obj)
+  }
+  if (ArrayBuffer.isView(obj)) {
+    return new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength)
+  }
+  /* c8 ignore next */
+  throw new Error('Unknown type, must be binary type')
+}
+
+function toHex (d) {
+  if (typeof d === 'string') {
+    return d
+  }
+  return Array.prototype.reduce.call(toBytes(d), (p, c) => `${p}${c.toString(16).padStart(2, '0')}`, '')
+}
+
+function fromHex (hex) {
+  if (hex instanceof Uint8Array) {
+    return hex
+  }
+  if (!hex.length) {
+    return new Uint8Array(0)
+  }
+  return new Uint8Array(hex.split('')
+    .map((c, i, d) => i % 2 === 0 ? `0x${c}${d[i + 1]}` : '')
+    .filter(Boolean)
+    .map((e) => parseInt(e, 16)))
+}
+
 module.exports.identityHasher = identityHasher
 module.exports.murmurHasher = murmurHasher
 module.exports.memoryStore = memoryStore
+module.exports.toHex = toHex
+module.exports.fromHex = fromHex
