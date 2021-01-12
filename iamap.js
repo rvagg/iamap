@@ -3,7 +3,7 @@
 
 const assert = require('assert')
 const { mask, setBit, bitmapHas, index } = require('./bit-utils')
-const codecNames = new Set(Object.keys(require('multicodec/src/base-table.json')))
+const codecNames = new Set(Object.keys(require('multicodec/src/base-table.js').baseTable))
 
 const defaultBitWidth = 8 // 2^8 = 256 buckets or children per node
 const defaultBucketSize = 5 // array size for a bucket of values
@@ -198,8 +198,12 @@ class IAMap {
     const hashBytes = hasherRegistry[options.hashAlg].hashBytes
 
     if (map !== undefined && !Buffer.isBuffer(map)) {
-      if (map instanceof Uint8Array) map = Buffer.from(map)
-      else throw new TypeError('`map` must be a Buffer')
+      /* istanbul ignore next 3 */
+      if (map instanceof Uint8Array) {
+        map = Buffer.from(map)
+      } else {
+        throw new TypeError('`map` must be a Uint8Array')
+      }
     }
     const mapLength = Math.ceil(Math.pow(2, this.config.bitWidth) / 8)
     if (map !== undefined && map.length !== mapLength) {
@@ -596,7 +600,10 @@ function findElement (node, bitpos, key) {
     for (let bucketIndex = 0; bucketIndex < element.bucket.length; bucketIndex++) {
       const bucketEntry = element.bucket[bucketIndex]
       const _key = bucketEntry.key
-      if (!Buffer.isBuffer(_key) && _key instanceof Uint8Array) bucketEntry.key = Buffer.from(_key)
+      /* istanbul ignore next 3 */
+      if (!Buffer.isBuffer(_key) && _key instanceof Uint8Array) {
+        bucketEntry.key = Buffer.from(_key)
+      }
       if (bucketEntry.key.equals(key)) {
         return { data: { found: true, elementAt, element, bucketIndex, bucketEntry } }
       }
