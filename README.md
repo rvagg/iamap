@@ -97,6 +97,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 
 ### Contents
 
+ * [`assert(condition, message?)`](#assert)
  * [`async iamap.create(store, options)`](#iamap__create)
  * [`async iamap.load(store, id)`](#iamap__load)
  * [`iamap.registerHasher(hashAlg, hashBytes, hasher)`](#iamap__registerHasher)
@@ -130,6 +131,12 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`iamap.isSerializable(serializable)`](#iamap__isSerializable)
  * [`iamap.fromSerializable(store, id, serializable[, options][, depth])`](#iamap__fromSerializable)
 
+<a name="assert"></a>
+### `assert(condition, message?)`
+
+* `condition` `(boolean)`
+* `message?` `(string)`
+
 <a name="iamap__create"></a>
 ### `async iamap.create(store, options)`
 
@@ -149,8 +156,8 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
   The `store` object should take the following form:
   `{ async save(node):id, async load(id):node, isEqual(id,id):boolean, isLink(obj):boolean }`
 * `options` `(Object)`: Options for this IAMap
-  * `options.hashAlg` `(string)`: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
-    hash function identifier, e.g. `'murmur3-32'`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
+  * `options.hashAlg` `(number)`: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
+    hash function identifier, e.g. `0x23` for `murmur3-32`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
   * `options.bitWidth` `(number, optional, default=`8`)`: The number of bits to extract from the hash to form a data element index at
     each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
     each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
@@ -184,8 +191,8 @@ Create a IAMap instance loaded from a serialised form in a backing store. See [`
 <a name="iamap__registerHasher"></a>
 ### `iamap.registerHasher(hashAlg, hashBytes, hasher)`
 
-* `hashAlg` `(string)`: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
-  function identifier, e.g. `'murmur3-32'`.
+* `hashAlg` `(number)`: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
+  function identifier **number**, e.g. `0x23` for `murmur3-32`.
 * `hashBytes` `(number)`: The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
 * `hasher` `(function)`: A hash function that takes a `Uint8Array` derived from the `key` values used for this
   Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value).
@@ -306,7 +313,7 @@ Note that the `map` property is a `Uint8Array` so will need special handling for
 Root node form:
 ```
 {
-  hashAlg: string
+  hashAlg: number
   bucketSize: number
   map: Uint8Array
   data: Array

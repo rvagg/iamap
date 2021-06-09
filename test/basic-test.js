@@ -6,15 +6,15 @@ const { assert } = require('chai')
 const { murmurHasher, identityHasher, memoryStore, fromHex, toHex } = require('./common')
 const iamap = require('../')
 
-iamap.registerHasher('murmur3-32', 32, murmurHasher)
-iamap.registerHasher('identity', 32, identityHasher) // not recommended
+iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
+iamap.registerHasher(0x00 /* 'identity' */, 32, identityHasher) // not recommended
 
 describe('Basics', () => {
   it('empty object', async () => {
     const store = memoryStore()
-    const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+    const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     assert.deepEqual(map.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: new Uint8Array(32), // 2**8, bitWidth of 8
       data: []
@@ -29,7 +29,7 @@ describe('Basics', () => {
 
   it('test basic set/get', async () => {
     const store = memoryStore()
-    const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+    const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     const newMap = await map.set('foo', 'bar')
 
     assert.strictEqual(await newMap.get('foo'), 'bar')
@@ -40,13 +40,13 @@ describe('Basics', () => {
 
     // original map isn't mutated
     assert.deepEqual(map.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: new Uint8Array(32),
       data: []
     })
     assert.deepEqual(newMap.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: Uint8Array.from(newMap.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
@@ -64,7 +64,7 @@ describe('Basics', () => {
 
   it('test basic set/set-same/get', async () => {
     const store = memoryStore()
-    const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+    const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     const newMap1 = await map.set('foo', 'bar')
     const newMap2 = await newMap1.set('foo', 'bar')
 
@@ -74,13 +74,13 @@ describe('Basics', () => {
 
     // original map isn't mutated
     assert.deepEqual(map.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: new Uint8Array(32),
       data: []
     })
     assert.deepEqual(newMap1.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: Uint8Array.from(newMap1.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
@@ -100,7 +100,7 @@ describe('Basics', () => {
 
   it('test basic set/update/get', async () => {
     const store = memoryStore()
-    const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+    const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     const newMap1 = await map.set('foo', 'bar')
     const newMap2 = await newMap1.set('foo', 'baz')
 
@@ -111,20 +111,20 @@ describe('Basics', () => {
 
     // original map isn't mutated
     assert.deepEqual(map.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: new Uint8Array(32),
       data: []
     })
     assert.deepEqual(newMap1.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: Uint8Array.from(newMap1.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
     })
     assert.ok(newMap1.map !== 0)
     assert.deepEqual(newMap2.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: Uint8Array.from(newMap1.map),
       data: [[[new TextEncoder().encode('foo'), 'baz']]]
@@ -144,7 +144,7 @@ describe('Basics', () => {
 
   it('test basic set/get/delete', async () => {
     const store = memoryStore()
-    const map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+    const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     const setMap = await map.set('foo', 'bar')
     const deleteMap = await setMap.delete('foo')
 
@@ -155,13 +155,13 @@ describe('Basics', () => {
 
     // original map isn't mutated
     assert.deepEqual(map.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: new Uint8Array(32),
       data: []
     })
     assert.deepEqual(setMap.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: Uint8Array.from(setMap.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
@@ -191,7 +191,7 @@ describe('Basics', () => {
 
   it('test predictable single level fill', async () => {
     const store = memoryStore()
-    let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 3 })
+    let map = await iamap.create(store, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 3 })
     // bitWidth of 4 yields 16 buckets, we can use 'identity' hash to feed keys that we know
     // will go into certain slots
     for (let i = 0; i < 16; i++) {
@@ -237,7 +237,7 @@ describe('Basics', () => {
 
   it('test predictable fill vertical and collapse', async () => {
     const store = memoryStore()
-    const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }
+    const options = { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 }
     let map = await iamap.create(store, options)
 
     const k = (2 << 4) | 2
@@ -348,7 +348,7 @@ describe('Basics', () => {
 
   it('test predictable fill vertical, switched delete', async () => {
     const store = memoryStore()
-    const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 }
+    const options = { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 }
     let map = await iamap.create(store, options)
     const k = (2 << 4) | 2
     // 3 entries at the lowest node, one part way back up, like last test
@@ -389,7 +389,7 @@ describe('Basics', () => {
 
   it('test predictable fill vertical, larger buckets', async () => {
     const store = memoryStore()
-    const options = { hashAlg: 'identity', bitWidth: 4, bucketSize: 4 }
+    const options = { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 4 }
     let map = await iamap.create(store, options)
     const k = (6 << 4) | 6 // let's try index 6 now
 
@@ -449,7 +449,7 @@ describe('Basics', () => {
   it('test keys, values, entries', async () => {
     const store = memoryStore()
     // use the identity hash from the predictable fill test(s) to spread things out a bit
-    let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+    let map = await iamap.create(store, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 })
     const k = (2 << 4) | 2
     const ids = []
     map = await map.set(Uint8Array.from([k, k, k, 1 << 4]), 'pos2+1')
@@ -501,7 +501,7 @@ describe('Basics', () => {
     const store = memoryStore()
     function isEqual (id1, id2) { return id1.equals(id2) }
     function isLink (link) { return typeof link === 'number' }
-    let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+    let map = await iamap.create(store, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 })
     const k = (2 << 4) | 2
     map = await map.set(Uint8Array.from([k, k, 1 << 4]), 'pos2+1')
     map = await map.set(Uint8Array.from([k, k, 2 << 4]), 'pos2+2')
@@ -527,7 +527,7 @@ describe('Basics', () => {
 
   it('test non-store, sync block-by-block keys traversal', async () => {
     const store = memoryStore()
-    let map = await iamap.create(store, { hashAlg: 'identity', bitWidth: 4, bucketSize: 2 })
+    let map = await iamap.create(store, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 })
     const k = (2 << 4) | 2
     map = await map.set(Uint8Array.from([k, k, 1 << 4]), 'pos2+1')
     map = await map.set(Uint8Array.from([k, k, 2 << 4]), 'pos2+2')
