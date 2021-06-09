@@ -6,7 +6,7 @@ const { assert } = require('chai')
 const { murmurHasher, memoryStore } = require('./common')
 const iamap = require('../')
 
-iamap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 
 const PEAK = 100 // not huge but delete is super expensive
 
@@ -17,12 +17,12 @@ const keys = []
 
 describe('Large(ish)', () => {
   it(`fill with ${PEAK}`, async () => {
-    let map = await iamap.create(store, { hashAlg: 'murmur3-32' })
+    let map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     const expectedValues = []
     const expectedEntries = []
 
     assert.deepEqual(map.toSerializable(), {
-      hashAlg: 'murmur3-32',
+      hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: new Uint8Array((2 ** 8) / 8),
       data: []
