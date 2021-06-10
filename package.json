@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "An **I**mmutable **A**synchronous **Map**.",
   "main": "iamap.js",
+  "types": "./types/iamap.d.ts",
   "scripts": {
     "lint": "standard *.js test/*.js",
+    "build": "npm run docs && npm run build:types",
+    "build:types": "tsc --build",
     "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/*-test.js",
     "test:browser": "polendina --page --worker --serviceworker --cleanup test/*-test.js",
     "test": "npm run lint && npm run test:node && npm run test:browser",
@@ -14,7 +17,7 @@
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
   "license": "Apache-2.0",
   "dependencies": {
-    "bit-sequence": "^1.0.0"
+    "bit-sequence": "^1.1.0"
   },
   "devDependencies": {
     "c8": "^7.7.2",
@@ -24,11 +27,22 @@
     "mocha": "^9.0.0",
     "murmurhash3js-revisited": "^3.0.0",
     "polendina": "^1.1.0",
-    "standard": "^16.0.3"
+    "standard": "^16.0.3",
+    "typescript": "^4.3.2"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/rvagg/iamap.git"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "types/*"
+      ],
+      "types/*": [
+        "types/*"
+      ]
+    }
   },
   "release": {
     "branches": [
