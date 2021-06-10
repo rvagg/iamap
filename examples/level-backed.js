@@ -2,7 +2,7 @@
 
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
-// Needs additional dependencies: npm i level ipld-dag-cbor multihashing multicodec cids split2
+// Needs additional dependencies: npm i level split2 multiformats @ipld/dag-cbor
 // Run with `node --no-warnings` to suppress any experimental warnings
 
 /*
@@ -47,18 +47,14 @@ const path = require('path')
 const { Transform } = require('stream')
 const murmurhash3 = require('murmurhash3js-revisited')
 const level = require('level')
-const dagCbor = require('ipld-dag-cbor')
-const multihashing = require('multihashing')
-const multicodec = require('multicodec')
-const CID = require('cids')
+const { CID } = require('multiformats/cid')
+const Block = require('multiformats/block')
+const { sha256 } = require('multiformats/hashes/sha2')
+const dagCbor = require('@ipld/dag-cbor')
 const split2 = require('split2')
 const iamap = require('../')
 
 const dbLocation = '/tmp/iamap-level-example.db'
-
-const serialize = dagCbor.util.serialize
-const deserialize = dagCbor.util.deserialize
-
 const store = {
   stats: {
     loads: 0,
@@ -68,13 +64,10 @@ const store = {
   // CBOR (binary) encoded objects as the values
   backingDb: level(dbLocation, { keyEncoding: 'ascii', valueEncoding: 'binary' }),
   encode: async (obj) => {
-    const block = await serialize(obj)
-    const multihash = multihashing(block, dagCbor.util.defaultHashAlg)
-    const cid = new CID(1, multicodec.print[multicodec.DAG_CBOR], multihash)
-    return { cid, block }
+    return await Block.encode({ value: obj, codec: dagCbor, hasher: sha256 })
   },
-  decode: async (block) => {
-    return deserialize(block)
+  decode: async (bytes) => {
+    return (await Block.decode({ bytes, codec: dagCbor, hasher: sha256 })).value
   },
 
   // These next 3 methods are used by IAMap, they are part of the required IAMap `store` interface
@@ -82,16 +75,16 @@ const store = {
     // Save some arbitrary object to our store. When IAMap uses this it's saving a plain object
     // representation of an IAMap node. See IAMap#toSerializable() for information on that form.
     store.stats.saves++
-    const { cid, block } = await store.encode(value)
-    await store.backingDb.put(cid.toBaseEncodedString(), block)
+    const { cid, bytes } = await store.encode(value)
+    await store.backingDb.put(cid.toString(), bytes)
     return cid
   },
   // Load some arbitrary object from our store. When IAMap uses this, it's expecting a plain object
   // representation of an IAMap that it can deserialise. See IAMap#fromSerializable().
   load: async (id) => {
     store.stats.loads++
-    assert(CID.isCID(id))
-    const block = await store.backingDb.get(id.toBaseEncodedString())
+    assert(CID.asCID(id) != null)
+    const block = await store.backingDb.get(id.toString())
     return store.decode(block)
   },
   // Equality test two identifiers, IAMap uses this and because save() returns CIDs we're comparing those
@@ -107,12 +100,13 @@ const store = {
 function murmurHasher (key) {
   // key is a `Uint8Array`
   const b = new Uint8Array(4)
-  b.writeUInt32LE(murmurhash3.x86.hash32(key))
+  const view = new DataView(b.buffer)
+  view.setUint32(0, murmurhash3.x86.hash32(key), true)
   // we now have a 4-byte hash
   return b
 }
 // Names must match a multicodec name, see https://github.com/multiformats/multicodec/blob/master/table.csv
-iamap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 
 // recursive async iterator that finds and emits all package.json files found from our parent directory downward
 async function * findJs (dir) {
@@ -156,13 +150,13 @@ async function * findRequires (dir) {
 // it assumes its a CID
 async function createMap (id) {
   if (id) { // existing
-    if (!CID.isCID(id)) {
-      id = new CID(id)
+    if (typeof id === 'string') {
+      id = CID.parse(id)
     }
     return iamap.load(store, id)
   }
   // new map with default options, our hasher and custom store
-  return iamap.create(store, { hashAlg: 'murmur3-32' })
+  return iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
 }
 
 // --index <dir>
@@ -205,8 +199,9 @@ async function search (mapId, mod) {
     // if `mod` was found, we should now have an ID of a separate IAMap that is used as a Set
     const list = await createMap(listId)
     console.log(`'${mod}' is found in:`)
+    const textDecoder = new TextDecoder()
     for await (const f of list.keys()) { // we stored files as keys, so only list the keys
-      console.log(`  ${f}`)
+      console.log(`  ${textDecoder.decode(f)}`)
     }
   } else {
     console.log(`'${mod}' not found`)
@@ -245,7 +240,7 @@ async function stats (mapId) {
   }
 
   console.log(`Map comprises ${nodes} nodes, with a maximum depth of ${maxDepth + 1}, holding ${size} entries referencing ${files} files`)
-  console.log(`Most used module is '${maxUsed}' with ${maxUsedCount} files`)
+  console.log(`Most used module is '${new TextDecoder().decode(maxUsed)}' with ${maxUsedCount} files`)
 }
 
 function printUsage () {

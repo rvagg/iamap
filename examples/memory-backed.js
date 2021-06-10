@@ -61,11 +61,11 @@ function murmurHasher (key) {
 }
 
 // Names must match a multicodec name, see https://github.com/multiformats/multicodec/blob/master/table.csv
-iamap.registerHasher('murmur3-32', 32, murmurHasher)
+iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 
 async function memoryBacked () {
   const store = memoryStore() // new store
-  let map = await iamap.create(store, { hashAlg: 'murmur3-32' }) // new map with default options, our hasher and custom store
+  let map = await iamap.create(store, { hashAlg: 0x23 }) // new map with default options, our hasher and custom store
 
   for await (const pkg of findPackages(path.join(__dirname, '..'))) {
     // Store a string key and a JavaScript object as a value, this will work for our store but if we needed to store it
@@ -77,9 +77,10 @@ async function memoryBacked () {
     map = await map.set(`${pkg.name}@${pkg.version}`, pkg)
   }
 
+  const textDecoder = new TextDecoder()
   // iterate with `entries()` which has no guarantees of meaningful order
   for await (const entry of map.entries()) {
-    console.log(`${entry.key.toString()}${Array(Math.max(0, 30 - entry.key.length)).join(' ')} ${entry.value.description}`)
+    console.log(`${textDecoder.decode(entry.key)}${Array(Math.max(0, 30 - entry.key.length)).join(' ')} ${entry.value.description}`)
   }
 
   console.log(`IAMap serialized in store as ${map.id}`)
