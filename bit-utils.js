@@ -48,6 +48,7 @@ function setBit (bitmap, position, set) {
  */
 function bitmapHas (bitmap, position, byte, offset) {
   if (typeof byte !== 'number' || typeof offset !== 'number') {
+    /* c8 ignore next 3 */
     if (position === undefined) {
       throw new Error('`position` expected')
     }
