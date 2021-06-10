@@ -184,20 +184,22 @@ export class IAMap<T> {
      * `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
      * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
      * or an address or content address or other kind of link to the actual value.
+     * @param {Uint8Array} [_cachedHash] - for internal use
      * @returns {Promise<IAMap<T>>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
      * @async
      */
-    set(key: (string | Uint8Array), value: any): Promise<IAMap<T>>;
+    set(key: (string | Uint8Array), value: any, _cachedHash?: Uint8Array | undefined): Promise<IAMap<T>>;
     /**
      * Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
      *
      * @param {string|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
      * details about acceptable `key` types.
+     * @param {Uint8Array} [_cachedHash] - for internal use
      * @returns {Promise<any>} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
      * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
      * @async
      */
-    get(key: string | Uint8Array): Promise<any>;
+    get(key: string | Uint8Array, _cachedHash?: Uint8Array | undefined): Promise<any>;
     /**
      * Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
      *
@@ -214,11 +216,12 @@ export class IAMap<T> {
      *
      * @param {string|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
      * acceptable `key` types.
+     * @param {Uint8Array} [_cachedHash] - for internal use
      * @returns {Promise<IAMap<T>>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
      * instance if `key` does not exist within it.
      * @async
      */
-    delete(key: string | Uint8Array): Promise<IAMap<T>>;
+    delete(key: string | Uint8Array, _cachedHash?: Uint8Array | undefined): Promise<IAMap<T>>;
     /**
      * Asynchronously count the number of key/value pairs contained within this `IAMap`, including its children.
      *

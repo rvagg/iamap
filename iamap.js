@@ -297,14 +297,15 @@ class IAMap {
    * `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
    * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
    * or an address or content address or other kind of link to the actual value.
+   * @param {Uint8Array} [_cachedHash] - for internal use
    * @returns {Promise<IAMap<T>>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
    * @async
    */
-  async set (key, value) {
+  async set (key, value, _cachedHash) {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
-    const hash = hasher(this)(key)
+    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : hasher(this)(key)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
@@ -329,7 +330,7 @@ class IAMap {
           }
           if (data.element.bucket.length >= this.config.bucketSize) {
             // too many collisions at this level, replace a bucket with a child node
-            return (await replaceBucketWithNode(this, data.elementAt)).set(key, value)
+            return (await replaceBucketWithNode(this, data.elementAt)).set(key, value, hash)
           }
           // insert into the bucket and sort it
           return updateBucket(this, data.elementAt, -1, key, value)
@@ -337,7 +338,7 @@ class IAMap {
       } else if (link) {
         const child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(!!child)
-        const newChild = await child.set(key, value)
+        const newChild = await child.set(key, value, hash)
         return updateNode(this, link.elementAt, newChild)
       /* c8 ignore next 3 */
       } else {
@@ -353,15 +354,16 @@ class IAMap {
    *
    * @param {string|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
    * details about acceptable `key` types.
+   * @param {Uint8Array} [_cachedHash] - for internal use
    * @returns {Promise<any>} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
    * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
    * @async
    */
-  async get (key) {
+  async get (key, _cachedHash) {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
-    const hash = hasher(this)(key)
+    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : hasher(this)(key)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
       const { data, link } = findElement(this, bitpos, key)
@@ -377,7 +379,7 @@ class IAMap {
       } else if (link) {
         const child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(!!child)
-        return await child.get(key)
+        return await child.get(key, hash)
         /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
@@ -419,15 +421,16 @@ class IAMap {
    *
    * @param {string|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
    * acceptable `key` types.
+   * @param {Uint8Array} [_cachedHash] - for internal use
    * @returns {Promise<IAMap<T>>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
    * instance if `key` does not exist within it.
    * @async
    */
-  async delete (key) {
+  async delete (key, _cachedHash) {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
-    const hash = hasher(this)(key)
+    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : hasher(this)(key)
     assert(hash instanceof Uint8Array)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
@@ -463,7 +466,7 @@ class IAMap {
       } else if (link) {
         const child = await load(this.store, link.element.link, this.depth + 1, this.config)
         assert(!!child)
-        const newChild = await child.delete(key)
+        const newChild = await child.delete(key, hash)
         if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
           return this
         }
