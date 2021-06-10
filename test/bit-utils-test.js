@@ -3,25 +3,25 @@
 /* eslint-env mocha */
 
 const { assert } = require('chai')
-const { toHex } = require('./common')
-const { mask, bitmapHas, index, setBit } = require('../bit-utils')
+const { toHex } = require('./common.js')
+const { mask, bitmapHas, index, setBit } = require('../bit-utils.js')
 
 describe('Bit utils', () => {
   it('mask', () => {
-    assert.strictEqual(mask([0b11111111], 0, 5), 0b11111)
-    assert.strictEqual(mask([0b10101010], 0, 5), 0b10101)
-    assert.strictEqual(mask([0b10000000], 0, 5), 0b10000)
-    assert.strictEqual(mask([0b00010000], 0, 5), 0b00010)
-    assert.strictEqual(mask([0b10000100, 0b10010000], 0, 9), 0b100001001)
-    assert.strictEqual(mask([0b10101010, 0b10101010], 0, 9), 0b101010101)
-    assert.strictEqual(mask([0b10000100, 0b10010000], 1, 5), 0b10010)
-    assert.strictEqual(mask([0b10101010, 0b10101010], 1, 5), 0b01010)
-    assert.strictEqual(mask([0b10000100, 0b10010000], 2, 5), 0b01000)
-    assert.strictEqual(mask([0b10101010, 0b10101010], 2, 5), 0b10101)
-    assert.strictEqual(mask([0b10000100, 0b10010000, 0b10000100, 0b10000100], 3, 5), 0b01000)
-    assert.strictEqual(mask([0b10101010, 0b10101010, 0b10101010, 0b10101010], 3, 5), 0b01010)
-    assert.strictEqual(mask([0b10000100, 0b10010000, 0b10000100, 0b10000100], 4, 5), 0b01001)
-    assert.strictEqual(mask([0b10101010, 0b10101010, 0b10101010, 0b10101010], 4, 5), 0b10101)
+    assert.strictEqual(mask(Uint8Array.from([0b11111111]), 0, 5), 0b11111)
+    assert.strictEqual(mask(Uint8Array.from([0b10101010]), 0, 5), 0b10101)
+    assert.strictEqual(mask(Uint8Array.from([0b10000000]), 0, 5), 0b10000)
+    assert.strictEqual(mask(Uint8Array.from([0b00010000]), 0, 5), 0b00010)
+    assert.strictEqual(mask(Uint8Array.from([0b10000100, 0b10010000]), 0, 9), 0b100001001)
+    assert.strictEqual(mask(Uint8Array.from([0b10101010, 0b10101010]), 0, 9), 0b101010101)
+    assert.strictEqual(mask(Uint8Array.from([0b10000100, 0b10010000]), 1, 5), 0b10010)
+    assert.strictEqual(mask(Uint8Array.from([0b10101010, 0b10101010]), 1, 5), 0b01010)
+    assert.strictEqual(mask(Uint8Array.from([0b10000100, 0b10010000]), 2, 5), 0b01000)
+    assert.strictEqual(mask(Uint8Array.from([0b10101010, 0b10101010]), 2, 5), 0b10101)
+    assert.strictEqual(mask(Uint8Array.from([0b10000100, 0b10010000, 0b10000100, 0b10000100]), 3, 5), 0b01000)
+    assert.strictEqual(mask(Uint8Array.from([0b10101010, 0b10101010, 0b10101010, 0b10101010]), 3, 5), 0b01010)
+    assert.strictEqual(mask(Uint8Array.from([0b10000100, 0b10010000, 0b10000100, 0b10000100]), 4, 5), 0b01001)
+    assert.strictEqual(mask(Uint8Array.from([0b10101010, 0b10101010, 0b10101010, 0b10101010]), 4, 5), 0b10101)
   })
 
   it('bitmapHas', () => {

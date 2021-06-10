@@ -3,8 +3,8 @@
 /* eslint-env mocha */
 
 const { assert } = require('chai')
-const { murmurHasher, memoryStore } = require('./common')
-const iamap = require('../')
+const { murmurHasher, memoryStore } = require('./common.js')
+const iamap = require('../iamap.js')
 
 iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 
@@ -12,7 +12,9 @@ const PEAK = 100 // not huge but delete is super expensive
 
 const textDecoder = new TextDecoder()
 const store = memoryStore() // same store across tests
+/** @type {number} */
 let loadId
+/** @type {string[]} */
 const keys = []
 
 describe('Large(ish)', () => {

@@ -29,9 +29,9 @@
     "baseUrl": "."
   },
   "exclude": [
-    "node_modules",
-    "test",
-    "examples"
+    "./node_modules",
+    "./types/*",
+    "./examples"
   ],
   "compileOnSave": false
 }
