@@ -4,8 +4,8 @@
 
 const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
-const { murmurHasher, identityHasher, memoryStore } = require('./common')
-const iamap = require('../')
+const { murmurHasher, identityHasher, memoryStore, toHex } = require('./common.js')
+const iamap = require('../iamap.js')
 
 chai.use(chaiAsPromised)
 const { assert } = chai
@@ -13,6 +13,7 @@ const { assert } = chai
 iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 iamap.registerHasher(0x00 /* 'identity' */, 32, identityHasher) // not recommended
 
+/** @type {iamap.IAMap<number>} */
 let Constructor
 
 describe('Serialization', () => {
@@ -31,6 +32,7 @@ describe('Serialization', () => {
     const loadedMap = await iamap.load(store, map.id)
     assert.deepEqual(loadedMap, map)
 
+    // @ts-ignore
     Constructor = map.constructor
   })
 
@@ -49,7 +51,7 @@ describe('Serialization', () => {
     assert.strictEqual(map.config.hashAlg, 0x00 /* 'identity' */)
     assert.strictEqual(map.config.bitWidth, 8)
     assert.strictEqual(map.config.bucketSize, 3)
-    assert.strictEqual(map.map.toString('hex'), new Uint8Array(2 ** 8 / 8).toString('hex'))
+    assert.strictEqual(toHex(map.map), toHex(new Uint8Array(2 ** 8 / 8)))
     assert.ok(Array.isArray(map.data))
     assert.strictEqual(map.data.length, 0)
   })
@@ -75,7 +77,7 @@ describe('Serialization', () => {
     assert.strictEqual(map.config.hashAlg, 0x00 /* 'identity' */)
     assert.strictEqual(map.config.bitWidth, 7)
     assert.strictEqual(map.config.bucketSize, 30)
-    assert.strictEqual(map.map.toString('hex'), dmap.toString('hex'))
+    assert.strictEqual(toHex(map.map), toHex(dmap))
     assert.ok(Array.isArray(map.data))
     assert.strictEqual(map.data.length, 0)
   })
@@ -94,44 +96,60 @@ describe('Serialization', () => {
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.hashAlg = 0x00 /* 'identity' */
+    // @ts-ignore
     emptySerialized.bucketSize = 'foo'
+    // @ts-ignore
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.bucketSize = -1
+    // @ts-ignore
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
+    // @ts-ignore
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.bucketSize = 3
+    // @ts-ignore
     emptySerialized.data = { nope: 'nope' }
+    // @ts-ignore
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.data = []
+    // @ts-ignore
     emptySerialized.map = 'foo'
+    // @ts-ignore
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
+    // @ts-ignore
     emptySerialized.map = emptyMap
+    // @ts-ignore
     id = await store.save(emptySerialized)
+    // @ts-ignore
     assert.isRejected(iamap.load(store, id, 'foo'))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
+    // @ts-ignore
     emptySerialized.data = [{ woot: 'nope' }]
+    // @ts-ignore
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
+    // @ts-ignore
     emptySerialized.data = [[{ nope: 'nope' }]]
+    // @ts-ignore
     id = await store.save(emptySerialized)
     assert.isRejected(iamap.load(store, id))
 
     const mapCopy = Uint8Array.from(emptyMap)
     mapCopy[0] = 0b110011
+    // @ts-ignore
     emptySerialized = {
       map: mapCopy,
       data: []
@@ -156,9 +174,11 @@ describe('Serialization', () => {
         hashAlg: 0x00 /* 'identity' */,
         bitWidth: 5,
         bucketSize: 2
+        // @ts-ignore
       }, 'foobar')
     })
 
+    // @ts-ignore
     assert.throws(() => new Constructor(store, { hashAlg: 0x00 /* 'identity' */, bitWidth: 8 }, new Uint8Array(2 ** 8 / 8), 0, [{ nope: 'nope' }]))
   })
 
@@ -194,7 +214,7 @@ describe('Serialization', () => {
     assert.strictEqual(child.config.hashAlg, 0x00 /* 'identity' */)
     assert.strictEqual(child.config.bitWidth, 8)
     assert.strictEqual(child.config.bucketSize, 3)
-    assert.strictEqual(child.map.toString('hex'), childMap.toString('hex'))
+    assert.strictEqual(toHex(child.map), toHex(childMap))
     assert.ok(Array.isArray(child.data))
     assert.strictEqual(child.data.length, 0)
 
@@ -215,12 +235,14 @@ describe('Serialization', () => {
     }
     const id = await store.save(emptySerialized)
 
+    // @ts-ignore
     assert.isRejected(iamap.load(store, id, 32, {
       bitWidth: 8,
       bucketSize: 30
     })) // no hashAlg
 
     assert.isRejected(iamap.load(store, id, 32, {
+      // @ts-ignore
       hashAlg: { yoiks: true },
       bitWidth: 8,
       bucketSize: 30
@@ -228,6 +250,7 @@ describe('Serialization', () => {
 
     assert.isRejected(iamap.load(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
+      // @ts-ignore
       bitWidth: 'foo',
       bucketSize: 30
     })) // bad bitWidth
@@ -235,9 +258,11 @@ describe('Serialization', () => {
     assert.isRejected(iamap.load(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
+      // @ts-ignore
       bucketSize: true
     })) // bad bucketSize
 
+    // @ts-ignore
     assert.isRejected(iamap.load(store, id, 'foo', {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,

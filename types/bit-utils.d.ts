@@ -9,10 +9,10 @@ export function mask(hash: Uint8Array, depth: number, nbits: number): number;
  * set the `position` bit in the given `bitmap` to be `set` (truthy=1, falsey=0)
  * @param {Uint8Array} bitmap
  * @param {number} position
- * @param {boolean} set
+ * @param {boolean|0|1} set
  * @returns {Uint8Array}
  */
-export function setBit(bitmap: Uint8Array, position: number, set: boolean): Uint8Array;
+export function setBit(bitmap: Uint8Array, position: number, set: boolean | 0 | 1): Uint8Array;
 /**
  * check whether `bitmap` has a `1` at the given `position` bit
  * @param {Uint8Array} bitmap

@@ -1,8 +1,17 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
+// @ts-ignore
 const murmurhash3 = require('murmurhash3js-revisited')
 const assert = require('assert')
 
+/**
+ * @typedef {import('./interface').TestStore} TestStore
+ */
+
+/**
+ * @param {Uint8Array} key
+ * @returns {Uint8Array}
+ */
 function murmurHasher (key) {
   assert(key instanceof Uint8Array)
   const b = new Uint8Array(4)
@@ -12,11 +21,19 @@ function murmurHasher (key) {
 }
 
 // probably best not to use this for real applications, unless your keys have the qualities of hashes
+/**
+ * @param {Uint8Array} key
+ * @returns {Uint8Array}
+ */
 function identityHasher (key) {
   assert(key instanceof Uint8Array)
   return key
 }
 
+/**
+ * @param {any} obj
+ * @returns {number}
+ */
 function hash (obj) {
   return murmurhash3.x86.hash32(new TextEncoder().encode(JSON.stringify(obj)))
 }
@@ -25,6 +42,9 @@ function hash (obj) {
 // you'd use IAMap, ideally your backing store would generate IDs for you, such as a
 // CID for IPLD.
 
+/**
+ * @returns {TestStore}
+ */
 function memoryStore () {
   return {
     map: new Map(),
@@ -49,6 +69,10 @@ function memoryStore () {
   }
 }
 
+/**
+ * @param {any} obj
+ * @returns {Uint8Array}
+ */
 function toBytes (obj) {
   if (obj instanceof Uint8Array && obj.constructor.name === 'Uint8Array') {
     return obj
@@ -63,13 +87,22 @@ function toBytes (obj) {
   throw new Error('Unknown type, must be binary type')
 }
 
+/**
+ * @param {Uint8Array} d
+ * @returns {string}
+ */
 function toHex (d) {
   if (typeof d === 'string') {
     return d
   }
+  // @ts-ignore
   return Array.prototype.reduce.call(toBytes(d), (p, c) => `${p}${c.toString(16).padStart(2, '0')}`, '')
 }
 
+/**
+ * @param {string|Uint8Array} hex
+ * @returns {Uint8Array}
+ */
 function fromHex (hex) {
   if (hex instanceof Uint8Array) {
     return hex
@@ -78,8 +111,10 @@ function fromHex (hex) {
     return new Uint8Array(0)
   }
   return new Uint8Array(hex.split('')
+    // @ts-ignore
     .map((c, i, d) => i % 2 === 0 ? `0x${c}${d[i + 1]}` : '')
     .filter(Boolean)
+    // @ts-ignore
     .map((e) => parseInt(e, 16)))
 }
 

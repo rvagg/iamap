@@ -16,7 +16,7 @@ function mask (hash, depth, nbits) {
  * set the `position` bit in the given `bitmap` to be `set` (truthy=1, falsey=0)
  * @param {Uint8Array} bitmap
  * @param {number} position
- * @param {boolean} set
+ * @param {boolean|0|1} set
  * @returns {Uint8Array}
  */
 function setBit (bitmap, position, set) {

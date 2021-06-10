@@ -3,8 +3,8 @@
 /* eslint-env mocha */
 
 const { assert } = require('chai')
-const { murmurHasher, identityHasher, memoryStore, fromHex, toHex } = require('./common')
-const iamap = require('../')
+const { murmurHasher, identityHasher, memoryStore, fromHex, toHex } = require('./common.js')
+const iamap = require('../iamap.js')
 
 iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 iamap.registerHasher(0x00 /* 'identity' */, 32, identityHasher) // not recommended
@@ -30,6 +30,7 @@ describe('Basics', () => {
   it('test basic set/get', async () => {
     const store = memoryStore()
     const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
+    assert.strictEqual(toHex(map.map), '0'.repeat(64)) // sanity
     const newMap = await map.set('foo', 'bar')
 
     assert.strictEqual(await newMap.get('foo'), 'bar')
@@ -51,7 +52,7 @@ describe('Basics', () => {
       map: Uint8Array.from(newMap.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
     })
-    assert.ok(newMap.map !== 0)
+    assert.notStrictEqual(toHex(newMap.map), '0'.repeat(64))
     assert.strictEqual(store.map.size, 2)
     assert.strictEqual(store.saves, 2)
     assert.strictEqual(store.loads, 0)
@@ -65,6 +66,7 @@ describe('Basics', () => {
   it('test basic set/set-same/get', async () => {
     const store = memoryStore()
     const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
+    assert.strictEqual(toHex(map.map), '0'.repeat(64)) // sanity
     const newMap1 = await map.set('foo', 'bar')
     const newMap2 = await newMap1.set('foo', 'bar')
 
@@ -85,7 +87,7 @@ describe('Basics', () => {
       map: Uint8Array.from(newMap1.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
     })
-    assert.ok(newMap1.map !== 0)
+    assert.notStrictEqual(toHex(newMap1.map), '0'.repeat(64))
     assert.strictEqual(store.map.size, 2)
     assert.strictEqual(store.saves, 2)
     assert.strictEqual(store.loads, 0)
@@ -101,6 +103,7 @@ describe('Basics', () => {
   it('test basic set/update/get', async () => {
     const store = memoryStore()
     const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
+    assert.strictEqual(toHex(map.map), '0'.repeat(64)) // sanity
     const newMap1 = await map.set('foo', 'bar')
     const newMap2 = await newMap1.set('foo', 'baz')
 
@@ -122,14 +125,14 @@ describe('Basics', () => {
       map: Uint8Array.from(newMap1.map),
       data: [[[new TextEncoder().encode('foo'), 'bar']]]
     })
-    assert.ok(newMap1.map !== 0)
+    assert.notStrictEqual(toHex(newMap1.map), '0'.repeat(64))
     assert.deepEqual(newMap2.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
       map: Uint8Array.from(newMap1.map),
       data: [[[new TextEncoder().encode('foo'), 'baz']]]
     })
-    assert.ok(newMap2.map !== 0)
+    assert.notStrictEqual(toHex(newMap1.map), '0'.repeat(64))
     assert.strictEqual(store.map.size, 3)
     assert.strictEqual(store.saves, 3)
     assert.strictEqual(store.loads, 0)
@@ -207,7 +210,9 @@ describe('Basics', () => {
     map.data.forEach((e, i) => {
       assert.strictEqual(e.link, null)
       assert.ok(Array.isArray(e.bucket))
+      // @ts-ignore
       assert.strictEqual(e.bucket.length, 1)
+      // @ts-ignore
       assert.strictEqual(e.bucket[0].value, `value0x${i}`)
     })
 
@@ -228,9 +233,13 @@ describe('Basics', () => {
     map.data.forEach((e, i) => {
       assert.strictEqual(e.link, null)
       assert.ok(Array.isArray(e.bucket))
+      // @ts-ignore
       assert.strictEqual(e.bucket.length, 3)
+      // @ts-ignore
       assert.strictEqual(e.bucket[0].value, `value0x${i}`)
+      // @ts-ignore
       assert.strictEqual(e.bucket[1].value, `value1x${i}`)
+      // @ts-ignore
       assert.strictEqual(e.bucket[2].value, `value2x${i}`)
     })
   })
@@ -249,7 +258,7 @@ describe('Basics', () => {
 
     // check that we have filled our first level, even though we asked for position 2, `data` is compressed so it still
     // only has one element
-    async function validateBaseForm (map) {
+    async function validateBaseForm (/** @type {iamap.IAMap<number>} */ map) {
       assert.strictEqual(await map.get(Uint8Array.from([k, k, k, 1 << 4])), 'pos2+1')
       assert.strictEqual(await map.get(Uint8Array.from([k, k, k, 2 << 4])), 'pos2+2')
 
@@ -257,8 +266,11 @@ describe('Basics', () => {
       assert.strictEqual(map.data.length, 1)
       assert.strictEqual(map.data[0].link, null)
       assert.ok(Array.isArray(map.data[0].bucket))
+      // @ts-ignore
       assert.strictEqual(map.data[0].bucket.length, 2)
+      // @ts-ignore
       assert.strictEqual(map.data[0].bucket[0].value, 'pos2+1')
+      // @ts-ignore
       assert.strictEqual(map.data[0].bucket[1].value, 'pos2+2')
 
       assert.strictEqual(await map.isInvariant(), true)
@@ -292,7 +304,9 @@ describe('Basics', () => {
     for (let i = 0; i < 3; i++) {
       assert.strictEqual(child.data[i].link, null)
       assert.ok(Array.isArray(child.data[i].bucket))
+      // @ts-ignore
       assert.strictEqual(child.data[i].bucket.length, 1)
+      // @ts-ignore
       assert.strictEqual(child.data[i].bucket[0].value, `pos2+${i + 1}`)
     }
 
@@ -334,12 +348,17 @@ describe('Basics', () => {
     assert.strictEqual(child.data.length, 2)
     assert.strictEqual(child.data[0].link, null)
     assert.ok(Array.isArray(child.data[0].bucket))
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket.length, 1)
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket[0].value, 'pos2+0+0')
     assert.strictEqual(child.data[1].link, null)
     assert.ok(Array.isArray(child.data[1].bucket))
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket.length, 2)
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket[0].value, 'pos2+1')
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket[1].value, 'pos2+2')
 
     assert.strictEqual(await map.isInvariant(), true)
@@ -375,12 +394,17 @@ describe('Basics', () => {
     assert.strictEqual(child.data.length, 2)
     assert.strictEqual(child.data[0].link, null)
     assert.ok(Array.isArray(child.data[0].bucket))
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket.length, 1)
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket[0].value, 'pos2+0+0')
     assert.strictEqual(child.data[1].link, null)
     assert.ok(Array.isArray(child.data[1].bucket))
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket.length, 2)
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket[0].value, 'pos2+1')
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket[1].value, 'pos2+3')
 
     assert.strictEqual(await map.isInvariant(), true)
@@ -432,14 +456,23 @@ describe('Basics', () => {
     assert.strictEqual(child.data[3].link, null)
     assert.strictEqual(child.data[4].link, null)
     assert.ok(Array.isArray(child.data[0].bucket))
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket.length, 4)
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket[0].value, 'pos6+1+1')
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket[1].value, 'pos6+1+3')
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket[2].value, 'pos6+1+4')
+    // @ts-ignore
     assert.strictEqual(child.data[0].bucket[3].value, 'pos6+1+5')
+    // @ts-ignore
     assert.strictEqual(child.data[1].bucket[0].value, 'pos6+2')
+    // @ts-ignore
     assert.strictEqual(child.data[2].bucket[0].value, 'pos6+3')
+    // @ts-ignore
     assert.strictEqual(child.data[3].bucket[0].value, 'pos6+4')
+    // @ts-ignore
     assert.strictEqual(child.data[4].bucket[0].value, 'pos6+5')
 
     assert.strictEqual(await map.isInvariant(), true)
@@ -499,8 +532,8 @@ describe('Basics', () => {
 
   it('test non-store, sync block-by-block get traversal', async () => {
     const store = memoryStore()
-    function isEqual (id1, id2) { return id1.equals(id2) }
-    function isLink (link) { return typeof link === 'number' }
+    const isEqual = (/** @type {number} */ id1, /** @type {number} */ id2) => id1 === id2
+    const isLink = (/** @type {number} */ link) => typeof link === 'number'
     let map = await iamap.create(store, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 })
     const k = (2 << 4) | 2
     map = await map.set(Uint8Array.from([k, k, 1 << 4]), 'pos2+1')
