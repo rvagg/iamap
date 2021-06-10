@@ -312,6 +312,7 @@ class IAMap {
       const { data, link } = findElement(this, bitpos, key)
       if (data) {
         if (data.found) {
+          /* c8 ignore next 3 */
           if (data.bucketIndex === undefined || data.bucketEntry === undefined) {
             throw new Error('Unexpected error')
           }
@@ -323,6 +324,7 @@ class IAMap {
           // with a node of the same ID anyway
           return updateBucket(this, data.elementAt, data.bucketIndex, key, value)
         } else {
+          /* c8 ignore next 3 */
           if (!data.element.bucket) {
             throw new Error('Unexpected error')
           }
@@ -338,6 +340,7 @@ class IAMap {
         assert(!!child)
         const newChild = await child.set(key, value)
         return updateNode(this, link.elementAt, newChild)
+      /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
       }
@@ -403,6 +406,7 @@ class IAMap {
       const { data, link } = findElement(this, bitpos, key)
       if (data) {
         if (data.found) {
+          /* c8 ignore next 3 */
           if (data.bucketIndex === undefined) {
             throw new Error('Unexpected error')
           }
@@ -452,6 +456,7 @@ class IAMap {
           // simple node replacement with edited child
           return updateNode(this, link.elementAt, newChild)
         }
+        /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
       }
@@ -725,11 +730,13 @@ async function addNewElement (node, bitpos, key, value) {
  */
 async function updateBucket (node, elementAt, bucketAt, key, value) {
   const oldElement = node.data[elementAt]
+  /* c8 ignore next 3 */
   if (!oldElement.bucket) {
     throw new Error('Unexpected error')
   }
   const newElement = new Element(oldElement.bucket.slice())
   const newKv = new KV(key, value)
+  /* c8 ignore next 3 */
   if (!newElement.bucket) {
     throw new Error('Unexpected error')
   }
@@ -756,6 +763,7 @@ async function replaceBucketWithNode (node, elementAt) {
   let newNode = new IAMap(node.store, node.config, undefined, node.depth + 1)
   const element = node.data[elementAt]
   assert(!!element)
+  /* c8 ignore next 3 */
   if (!element.bucket) {
     throw new Error('Unexpected error')
   }
@@ -800,6 +808,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   /** @type {KV[]} */
   const newBucket = node.data.reduce((/** @type {KV[]} */ p, /** @type {Element} */ c, /** @type {number} */ i) => {
     if (i === elementAt) {
+      /* c8 ignore next 3 */
       if (!c.bucket) {
         throw new Error('Unexpected error')
       }
@@ -812,6 +821,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
         return p.concat(tmpBucket)
       }
     } else {
+      /* c8 ignore next 3 */
       if (!c.bucket) {
         throw new Error('Unexpected error')
       }
@@ -836,10 +846,12 @@ function removeFromBucket (data, elementAt, lastInBucket, bucketIndex) {
   if (!lastInBucket) {
     // bucket will not be empty, remove only the element from it
     const oldElement = data[elementAt]
+    /* c8 ignore next 3 */
     if (!oldElement.bucket) {
       throw new Error('Unexpected error')
     }
     const newElement = new Element(oldElement.bucket.slice())
+    /* c8 ignore next 3 */
     if (!newElement.bucket) {
       throw new Error('Unexpected error')
     }
@@ -865,6 +877,7 @@ async function collapseNodeInline (node, bitpos, newNode) {
   // assume the newNode has a single bucket and it's sorted and ready to replace the place
   // it had in node's element array
   assert(newNode.data.length === 1)
+  /* c8 ignore next 3 */
   if (!newNode.data[0].bucket) {
     throw new Error('Unexpected error')
   }
