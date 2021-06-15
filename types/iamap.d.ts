@@ -35,6 +35,8 @@ export type SerializedRoot = import('./interface').SerializedRoot;
  * to determine that an inline child node exists at the data element.
  * The `store` object should take the following form:
  * `{ async save(node):id, async load(id):node, isEqual(id,id):boolean, isLink(obj):boolean }`
+ * A `store` should throw an appropriately informative error when a node that is requested does not exist in the backing
+ * store.
  *
  * Options:
  *   - hashAlg (number) - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
@@ -86,10 +88,11 @@ export function load<T>(store: import("./interface").Store<T>, id: any, depth?: 
  * @param {number} hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
  * function identifier **number**, e.g. `0x23` for `murmur3-32`.
  * @param {number} hashBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
- * @param {(inp:Uint8Array)=>Uint8Array} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
- * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value).
+ * @param {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
+ * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
+ * may or may not be asynchronous but will be called with an `await`.
  */
-export function registerHasher(hashAlg: number, hashBytes: number, hasher: (inp: Uint8Array) => Uint8Array): void;
+export function registerHasher(hashAlg: number, hashBytes: number, hasher: (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>)): void;
 /**
  * Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
  * produced by {@link IAMap#toSerializable}.

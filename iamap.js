@@ -20,7 +20,7 @@ const defaultBucketSize = 5 // array size for a bucket of values
  */
 
 /**
- * @type {{ hasher:(inp:Uint8Array)=>Uint8Array, hashBytes: number }[]}
+ * @type {{ hasher:(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>), hashBytes: number }[]}
  */
 const hasherRegistry = []
 
@@ -63,6 +63,8 @@ function assert (condition, message) {
  * to determine that an inline child node exists at the data element.
  * The `store` object should take the following form:
  * `{ async save(node):id, async load(id):node, isEqual(id,id):boolean, isLink(obj):boolean }`
+ * A `store` should throw an appropriately informative error when a node that is requested does not exist in the backing
+ * store.
  *
  * Options:
  *   - hashAlg (number) - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
@@ -127,8 +129,9 @@ async function load (store, id, depth = 0, options) {
  * @param {number} hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
  * function identifier **number**, e.g. `0x23` for `murmur3-32`.
  * @param {number} hashBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
- * @param {(inp:Uint8Array)=>Uint8Array} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
- * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value).
+ * @param {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
+ * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
+ * may or may not be asynchronous but will be called with an `await`.
  */
 function registerHasher (hashAlg, hashBytes, hasher) {
   if (!Number.isInteger(hashAlg)) {
@@ -305,7 +308,7 @@ class IAMap {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
-    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : hasher(this)(key)
+    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : await hasher(this)(key)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
@@ -363,7 +366,7 @@ class IAMap {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
-    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : hasher(this)(key)
+    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : await hasher(this)(key)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
     if (bitmapHas(this.map, bitpos)) { // should be in a bucket in this node
       const { data, link } = findElement(this, bitpos, key)
@@ -430,7 +433,7 @@ class IAMap {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
-    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : hasher(this)(key)
+    const hash = _cachedHash instanceof Uint8Array ? _cachedHash : await hasher(this)(key)
     assert(hash instanceof Uint8Array)
     const bitpos = mask(hash, this.depth, this.config.bitWidth)
 
@@ -1097,7 +1100,7 @@ IAMap.isIAMap = function isIAMap (node) {
  *
  * @template T
  * @param {IAMap<T>} map
- * @returns {(inp:Uint8Array)=>Uint8Array}
+ * @returns {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)}
  */
 function hasher (map) {
   return hasherRegistry[map.config.hashAlg].hasher
