@@ -1112,12 +1112,22 @@ function hasher (map) {
  * @returns {number}
  */
 function byteCompare (b1, b2) {
-  for (let i = 0; i < b1.length; i++) {
-    if (b1[i] === b2[i]) {
-      continue
+  let x = b1.length
+  let y = b2.length
+
+  for (let i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (b1[i] !== b2[i]) {
+      x = b1[i]
+      y = b2[i]
+      break
     }
-    return b1[i] < b2[i] ? -1 : 1
-  } /* c8 ignore next 3 */
+  }
+  if (x < y) {
+    return -1
+  }
+  if (y < x) {
+    return 1
+  }
   return 0
 }
 
