@@ -53,6 +53,7 @@ describe('Errors', () => {
     await assert.isFulfilled(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */ }))
     // @ts-ignore
     await assert.isRejected(iamap.create(devnull, { hashAlg: 'herp' }))
+    await assert.isRejected(iamap.create(devnull, { hashAlg: 0xff /* '??' */, bitWidth: 3 }))
     await assert.isRejected(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: -1 }))
     await assert.isRejected(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 0 }))
     await assert.isRejected(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 1 }))

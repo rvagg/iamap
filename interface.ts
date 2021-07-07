@@ -22,12 +22,13 @@ export type SerializedKV = [Uint8Array, any]
 
 export type SerializedElement = SerializedKV | any /* link */
 
-export interface SerializedNode {
-  map: Uint8Array,
-  data: SerializedElement[]
-}
+type NodeMap = Uint8Array
+type NodeData = SerializedElement[]
 
-export interface SerializedRoot extends SerializedNode {
+export type SerializedNode = [NodeMap, NodeData]
+
+export interface SerializedRoot {
   hashAlg: number,
   bucketSize: number,
+  hamt: SerializedNode
 }

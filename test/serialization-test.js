@@ -10,6 +10,11 @@ const iamap = require('../iamap.js')
 chai.use(chaiAsPromised)
 const { assert } = chai
 
+/**
+ * @typedef {import('../iamap.js').SerializedRoot} SerializedRoot
+ * @typedef {import('../iamap.js').SerializedNode} SerializedNode
+ */
+
 iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 iamap.registerHasher(0x00 /* 'identity' */, 32, identityHasher) // not recommended
 
@@ -20,11 +25,11 @@ describe('Serialization', () => {
   it('empty object', async () => {
     const store = memoryStore()
     const map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
+    /** @type {SerializedRoot} */
     const emptySerialized = {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array((2 ** 8) / 8),
-      data: []
+      hamt: [new Uint8Array((2 ** 8) / 8), []]
     }
 
     assert.deepEqual(map.toSerializable(), emptySerialized)
@@ -38,11 +43,11 @@ describe('Serialization', () => {
 
   it('empty custom', async () => {
     const store = memoryStore()
+    /** @type {SerializedRoot} */
     const emptySerialized = {
       hashAlg: 0x00 /* 'identity' */, // identity
       bucketSize: 3,
-      map: new Uint8Array(2 ** 8 / 8),
-      data: []
+      hamt: [new Uint8Array(2 ** 8 / 8), []]
     }
     const id = await store.save(emptySerialized)
 
@@ -60,10 +65,8 @@ describe('Serialization', () => {
     const store = memoryStore()
     const dmap = new Uint8Array(2 ** 7 / 8)
     dmap[5] = 0b110011
-    const emptySerialized = {
-      map: dmap,
-      data: []
-    }
+    /** @type {SerializedNode} */
+    const emptySerialized = [dmap, []]
     const id = await store.save(emptySerialized)
 
     const map = await iamap.load(store, id, 10, {
@@ -85,14 +88,14 @@ describe('Serialization', () => {
   it('malformed', async () => {
     const store = memoryStore()
     const emptyMap = new Uint8Array(2 ** 8 / 8)
+    /** @type {SerializedRoot} */
     let emptySerialized = {
       hashAlg: 0x12 /* 'sha2-256' */, // not registered
       bucketSize: 3,
-      map: emptyMap,
-      data: []
+      hamt: [emptyMap, []]
     }
     let id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
+    await assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.hashAlg = 0x00 /* 'identity' */
@@ -100,77 +103,83 @@ describe('Serialization', () => {
     emptySerialized.bucketSize = 'foo'
     // @ts-ignore
     id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
+    await assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.bucketSize = -1
     // @ts-ignore
     id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
+    await assert.isRejected(iamap.load(store, id))
 
     // @ts-ignore
     emptySerialized = Object.assign({}, emptySerialized) // clone
     emptySerialized.bucketSize = 3
     // @ts-ignore
-    emptySerialized.data = { nope: 'nope' }
+    emptySerialized.hamt[1] = { nope: 'nope' }
     // @ts-ignore
     id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
+    await assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
-    emptySerialized.data = []
+    emptySerialized.hamt[1] = []
     // @ts-ignore
-    emptySerialized.map = 'foo'
-    // @ts-ignore
-    id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
-
-    emptySerialized = Object.assign({}, emptySerialized) // clone
-    // @ts-ignore
-    emptySerialized.map = emptyMap
+    emptySerialized.hamt[0] = 'foo'
     // @ts-ignore
     id = await store.save(emptySerialized)
-    // @ts-ignore
-    assert.isRejected(iamap.load(store, id, 'foo'))
+    await assert.isRejected(iamap.load(store, id))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     // @ts-ignore
-    emptySerialized.data = [{ woot: 'nope' }]
+    emptySerialized.hamt[0] = emptyMap
     // @ts-ignore
     id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
+    // @ts-ignore
+    await assert.isRejected(iamap.load(store, id, 'foo'))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     // @ts-ignore
-    emptySerialized.data = [[{ nope: 'nope' }]]
+    emptySerialized.hamt[1] = [{ woot: 'nope' }]
     // @ts-ignore
     id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id))
+    await assert.isRejected(iamap.load(store, id))
+
+    emptySerialized = Object.assign({}, emptySerialized) // clone
+    // @ts-ignore
+    emptySerialized.hamt[1] = [[{ nope: 'nope' }]]
+    // @ts-ignore
+    id = await store.save(emptySerialized)
+    await assert.isRejected(iamap.load(store, id))
 
     const mapCopy = Uint8Array.from(emptyMap)
     mapCopy[0] = 0b110011
-    // @ts-ignore
-    emptySerialized = {
-      map: mapCopy,
-      data: []
-    }
-    id = await store.save(emptySerialized)
+    /** @type {SerializedNode} */
+    let emptyChildSerialized = [mapCopy, []]
+    id = await store.save(emptyChildSerialized)
     assert.isFulfilled(iamap.load(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       bucketSize: 30
     })) // this is OK for bitWidth of 8 and hash bytes of 32
 
-    emptySerialized = Object.assign({}, emptySerialized) // clone
-    id = await store.save(emptySerialized)
-    assert.isRejected(iamap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
+    emptyChildSerialized = /** @type {SerializedNode} */ (emptyChildSerialized.slice()) // clone
+    id = await store.save(emptyChildSerialized)
+    await assert.isRejected(iamap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       bucketSize: 30
     }))
 
     assert.throws(() => {
-      iamap.fromSerializable(store, undefined, emptySerialized, {
+      iamap.fromSerializable(store, undefined, ['nope'], {
+        hashAlg: 0x00 /* 'identity' */,
+        bitWidth: 5,
+        bucketSize: 2
+        // @ts-ignore
+      }, 'foobar')
+    })
+
+    assert.throws(() => {
+      iamap.fromSerializable(store, undefined, emptyChildSerialized, {
         hashAlg: 0x00 /* 'identity' */,
         bitWidth: 5,
         bucketSize: 2
@@ -185,18 +194,16 @@ describe('Serialization', () => {
   it('fromChildSerializable', async () => {
     const store = memoryStore()
 
+    /** @type {SerializedRoot} */
     const emptySerializedRoot = {
       hashAlg: 0x00 /* 'identity' */,
       bucketSize: 3,
-      map: new Uint8Array(2 ** 8 / 8),
-      data: []
+      hamt: [new Uint8Array(2 ** 8 / 8), []]
     }
     const childMap = new Uint8Array(2 ** 8 / 8)
     childMap[4] = 0b110011
-    const emptySerializedChild = {
-      map: childMap,
-      data: []
-    }
+    /** @type {SerializedNode} */
+    const emptySerializedChild = [childMap, []]
 
     assert.strictEqual(iamap.isRootSerializable(emptySerializedRoot), true)
     assert.strictEqual(iamap.isSerializable(emptySerializedRoot), true)
@@ -229,33 +236,30 @@ describe('Serialization', () => {
     const map = new Uint8Array(2 ** 8 / 8)
     map[4] = 0b110011
 
-    const emptySerialized = {
-      map: map,
-      data: []
-    }
+    const emptySerialized = [map, []]
     const id = await store.save(emptySerialized)
 
     // @ts-ignore
-    assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.load(store, id, 32, {
       bitWidth: 8,
       bucketSize: 30
     })) // no hashAlg
 
-    assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.load(store, id, 32, {
       // @ts-ignore
       hashAlg: { yoiks: true },
       bitWidth: 8,
       bucketSize: 30
     })) // bad hashAlg
 
-    assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.load(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       // @ts-ignore
       bitWidth: 'foo',
       bucketSize: 30
     })) // bad bitWidth
 
-    assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.load(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       // @ts-ignore
@@ -263,7 +267,7 @@ describe('Serialization', () => {
     })) // bad bucketSize
 
     // @ts-ignore
-    assert.isRejected(iamap.load(store, id, 'foo', {
+    await assert.isRejected(iamap.load(store, id, 'foo', {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       bucketSize: 8

@@ -16,12 +16,13 @@ export interface Config {
 }
 export declare type SerializedKV = [Uint8Array, any];
 export declare type SerializedElement = SerializedKV | any;
-export interface SerializedNode {
-    map: Uint8Array;
-    data: SerializedElement[];
-}
-export interface SerializedRoot extends SerializedNode {
+declare type NodeMap = Uint8Array;
+declare type NodeData = SerializedElement[];
+export declare type SerializedNode = [NodeMap, NodeData];
+export interface SerializedRoot {
     hashAlg: number;
     bucketSize: number;
+    hamt: SerializedNode;
 }
+export {};
 //# sourceMappingURL=interface.d.ts.map

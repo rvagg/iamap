@@ -16,8 +16,7 @@ describe('Basics', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array(32), // 2**8, bitWidth of 8
-      data: []
+      hamt: [new Uint8Array(32) /* 2**8, bitWidth of 8 */, []]
     })
     assert.strictEqual(store.map.size, 1)
     assert.strictEqual(store.saves, 1)
@@ -43,14 +42,12 @@ describe('Basics', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array(32),
-      data: []
+      hamt: [new Uint8Array(32), []]
     })
     assert.deepEqual(newMap.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: Uint8Array.from(newMap.map),
-      data: [[[new TextEncoder().encode('foo'), 'bar']]]
+      hamt: [Uint8Array.from(newMap.map), [[[new TextEncoder().encode('foo'), 'bar']]]]
     })
     assert.notStrictEqual(toHex(newMap.map), '0'.repeat(64))
     assert.strictEqual(store.map.size, 2)
@@ -78,14 +75,12 @@ describe('Basics', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array(32),
-      data: []
+      hamt: [new Uint8Array(32), []]
     })
     assert.deepEqual(newMap1.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: Uint8Array.from(newMap1.map),
-      data: [[[new TextEncoder().encode('foo'), 'bar']]]
+      hamt: [Uint8Array.from(newMap1.map), [[[new TextEncoder().encode('foo'), 'bar']]]]
     })
     assert.notStrictEqual(toHex(newMap1.map), '0'.repeat(64))
     assert.strictEqual(store.map.size, 2)
@@ -116,21 +111,18 @@ describe('Basics', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array(32),
-      data: []
+      hamt: [new Uint8Array(32), []]
     })
     assert.deepEqual(newMap1.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: Uint8Array.from(newMap1.map),
-      data: [[[new TextEncoder().encode('foo'), 'bar']]]
+      hamt: [Uint8Array.from(newMap1.map), [[[new TextEncoder().encode('foo'), 'bar']]]]
     })
     assert.notStrictEqual(toHex(newMap1.map), '0'.repeat(64))
     assert.deepEqual(newMap2.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: Uint8Array.from(newMap1.map),
-      data: [[[new TextEncoder().encode('foo'), 'baz']]]
+      hamt: [Uint8Array.from(newMap1.map), [[[new TextEncoder().encode('foo'), 'baz']]]]
     })
     assert.notStrictEqual(toHex(newMap1.map), '0'.repeat(64))
     assert.strictEqual(store.map.size, 3)
@@ -160,14 +152,12 @@ describe('Basics', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array(32),
-      data: []
+      hamt: [new Uint8Array(32), []]
     })
     assert.deepEqual(setMap.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: Uint8Array.from(setMap.map),
-      data: [[[new TextEncoder().encode('foo'), 'bar']]]
+      hamt: [Uint8Array.from(setMap.map), [[[new TextEncoder().encode('foo'), 'bar']]]]
     })
     // should be back to square one
     assert.deepEqual(deleteMap.toSerializable(), map.toSerializable())
