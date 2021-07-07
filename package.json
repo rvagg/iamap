@@ -15,7 +15,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "bit-sequence": "^1.0.0",
-    "multicodec": "^2.1.0"
+    "multicodec": "^3.1.0"
   },
   "devDependencies": {
     "c8": "^7.4.0",
