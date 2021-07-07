@@ -26,8 +26,7 @@ describe('Large(ish)', () => {
     assert.deepEqual(map.toSerializable(), {
       hashAlg: 0x23 /* 'murmur3-32' */,
       bucketSize: 5,
-      map: new Uint8Array((2 ** 8) / 8),
-      data: []
+      hamt: [new Uint8Array((2 ** 8) / 8), []]
     })
     assert.strictEqual(store.map.size, 1)
     assert.strictEqual(store.saves, 1)

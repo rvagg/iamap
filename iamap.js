@@ -621,20 +621,18 @@ class IAMap {
    * {
    *   hashAlg: number
    *   bucketSize: number
-   *   map: Uint8Array
-   *   data: Array
+   *   hamt: [Uint8Array, Array]
    * }
    * ```
    *
    * Intermediate and leaf node form:
    * ```
-   * {
-   *   map: Uint8Array
-   *   data: Array
-   * }
+   * [Uint8Array, Array]
    * ```
    *
-   * Where `data` is an array of a mix of either buckets or links:
+   * The `Uint8Array` in both forms is the 'map' used to identify the presence of an element in this node.
+   *
+   * The second element in the tuple in both forms, `Array`, is an elements array a mix of either buckets or links:
    *
    * * A bucket is an array of two elements, the first being a `key` of type `Uint8Array` and the second a `value`
    *   or whatever type has been provided in `set()` operations for this `IAMap`.
@@ -652,15 +650,17 @@ class IAMap {
     const data = this.data.map((/** @type {Element} */ e) => {
       return e.toSerializable()
     })
-    if (this.depth === 0) {
-      return {
-        map,
-        hashAlg: this.config.hashAlg,
-        bucketSize: this.config.bucketSize,
-        data
-      }
+    /** @type {SerializedNode} */
+    const hamt = [map, data]
+    if (this.depth !== 0) {
+      return hamt
     }
-    return { map, data }
+    /** @type {SerializedElement} */
+    return {
+      hashAlg: this.config.hashAlg,
+      bucketSize: this.config.bucketSize,
+      hamt
+    }
   }
 
   /**
@@ -1017,7 +1017,11 @@ function buildConfig (options) {
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
  */
 function isRootSerializable (serializable) {
-  return Number.isInteger(serializable.hashAlg) && Number.isInteger(serializable.bucketSize)
+  return typeof serializable === 'object' &&
+    Number.isInteger(serializable.hashAlg) &&
+    Number.isInteger(serializable.bucketSize) &&
+    Array.isArray(serializable.hamt) &&
+    isSerializable(serializable.hamt)
 }
 
 /**
@@ -1031,7 +1035,10 @@ function isRootSerializable (serializable) {
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
 function isSerializable (serializable) {
-  return Array.isArray(serializable.data) && serializable.map instanceof Uint8Array
+  if (Array.isArray(serializable)) {
+    return serializable.length === 2 && serializable[0] instanceof Uint8Array && Array.isArray(serializable[1])
+  }
+  return isRootSerializable(serializable)
 }
 
 /**
@@ -1058,16 +1065,23 @@ function isSerializable (serializable) {
  * @returns {IAMap<T>}
  */
 function fromSerializable (store, id, serializable, options, depth = 0) {
-  assert(isSerializable(serializable))
+  /** @type {[Uint8Array, any[]]} */
+  let hamt
   if (depth === 0) { // even if options were supplied, ignore them and use what's in the serializable
     if (!isRootSerializable(serializable)) {
-      throw new Error('Object does not appear to be an IAMap root (depth==0)')
+      throw new Error('Loaded object does not appear to be an IAMap root (depth==0)')
     }
     // don't use passed-in options
     options = serializableToOptions(serializable)
+    hamt = serializable.hamt
+  } else {
+    if (!isSerializable(serializable)) {
+      throw new Error('Loaded object does not appear to be an IAMap node (depth>0)')
+    }
+    hamt = serializable
   }
-  const data = serializable.data.map(Element.fromSerializable.bind(null, store.isLink))
-  const node = new IAMap(store, options, serializable.map, depth, data)
+  const data = hamt[1].map(Element.fromSerializable.bind(null, store.isLink))
+  const node = new IAMap(store, options, hamt[0], depth, data)
   if (id != null) {
     node.id = id
   }
@@ -1081,7 +1095,7 @@ function fromSerializable (store, id, serializable, options, depth = 0) {
 function serializableToOptions (serializable) {
   return {
     hashAlg: serializable.hashAlg,
-    bitWidth: Math.log2(serializable.map.length * 8), // inverse of (2**bitWidth) / 8
+    bitWidth: Math.log2(serializable.hamt[0].length * 8), // inverse of (2**bitWidth) / 8
     bucketSize: serializable.bucketSize
   }
 }

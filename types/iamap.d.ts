@@ -286,20 +286,18 @@ export class IAMap<T> {
      * {
      *   hashAlg: number
      *   bucketSize: number
-     *   map: Uint8Array
-     *   data: Array
+     *   hamt: [Uint8Array, Array]
      * }
      * ```
      *
      * Intermediate and leaf node form:
      * ```
-     * {
-     *   map: Uint8Array
-     *   data: Array
-     * }
+     * [Uint8Array, Array]
      * ```
      *
-     * Where `data` is an array of a mix of either buckets or links:
+     * The `Uint8Array` in both forms is the 'map' used to identify the presence of an element in this node.
+     *
+     * The second element in the tuple in both forms, `Array`, is an elements array a mix of either buckets or links:
      *
      * * A bucket is an array of two elements, the first being a `key` of type `Uint8Array` and the second a `value`
      *   or whatever type has been provided in `set()` operations for this `IAMap`.
@@ -312,7 +310,7 @@ export class IAMap<T> {
      * @returns {SerializedNode|SerializedRoot} An object representing the internal state of this local `IAMap` node, including its links to child nodes
      * if any.
      */
-    toSerializable(): SerializedNode | SerializedRoot;
+    toSerializable(): import("./interface").SerializedNode | SerializedRoot;
     /**
      * Calculate the number of entries locally stored by this node. Performs a scan of local buckets and adds up
      * their size.
