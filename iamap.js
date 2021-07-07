@@ -17,16 +17,23 @@ const defaultBucketSize = 5 // array size for a bucket of values
  * @typedef {import('./interface').SerializedElement} SerializedElement
  * @typedef {import('./interface').SerializedNode} SerializedNode
  * @typedef {import('./interface').SerializedRoot} SerializedRoot
+ * @typedef {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} Hasher
+ * @typedef {{ hasher: Hasher, hashBytes: number }[]} Registry
+ * @typedef {(link:any)=>boolean} IsLink
+ * @typedef {readonly Element[]} ReadonlyElement
+ * @typedef {{data?: { found: boolean, elementAt: number, element: Element, bucketIndex?: number, bucketEntry?: KV }, link?: { elementAt: number, element: Element }}} FoundElement
  */
 
 /**
- * @type {{ hasher:(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>), hashBytes: number }[]}
+ * @type {Registry}
+ * @ignore
  */
 const hasherRegistry = []
 
 const textEncoder = new TextEncoder()
 
 /**
+ * @ignore
  * @param {boolean} condition
  * @param {string} [message]
  */
@@ -129,7 +136,7 @@ async function load (store, id, depth = 0, options) {
  * @param {number} hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
  * function identifier **number**, e.g. `0x23` for `murmur3-32`.
  * @param {number} hashBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
- * @param {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
+ * @param {Hasher} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
  * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
  * may or may not be asynchronous but will be called with an `await`.
  */
@@ -147,8 +154,12 @@ function registerHasher (hashAlg, hashBytes, hasher) {
 }
 
 // simple stable key/value representation
+/**
+ * @ignore
+ */
 class KV {
   /**
+   * @ignore
    * @param {Uint8Array} key
    * @param {any} value
    */
@@ -158,6 +169,7 @@ class KV {
   }
 
   /**
+   * @ignore
    * @returns {SerializedKV}
    */
   toSerializable () {
@@ -166,6 +178,7 @@ class KV {
 }
 
 /**
+ * @ignore
  * @param {SerializedKV} obj
  * @returns {KV}
  */
@@ -179,6 +192,7 @@ KV.fromSerializable = function (obj) {
 // an array (bucket) of KVs or a link to a child node
 class Element {
   /**
+   * @ignore
    * @param {KV[]} [bucket]
    * @param {any} [link]
    */
@@ -189,6 +203,7 @@ class Element {
   }
 
   /**
+   * @ignore
    * @returns {SerializedElement}
    */
   toSerializable () {
@@ -204,7 +219,8 @@ class Element {
 }
 
 /**
- * @param {(link:any)=>boolean} isLink
+ * @ignore
+ * @param {IsLink} isLink
  * @param {any} obj
  * @returns {Element}
  */
@@ -258,7 +274,10 @@ class IAMap {
     }
     this.store = store
 
-    /** @type {any|null} */
+    /**
+     * @ignore
+     * @type {any|null}
+     */
     this.id = null
     this.config = buildConfig(options)
 
@@ -283,7 +302,10 @@ class IAMap {
       throw new Error('Overflow: maximum tree depth reached')
     }
 
-    /** @type {readonly Element[]} */
+    /**
+     * @ignore
+     * @type {ReadonlyElement}
+     */
     this.data = Object.freeze(data || [])
     for (const e of this.data) {
       if (!(e instanceof Element)) {
@@ -650,12 +672,18 @@ class IAMap {
     const data = this.data.map((/** @type {Element} */ e) => {
       return e.toSerializable()
     })
-    /** @type {SerializedNode} */
+    /**
+     * @ignore
+     * @type {SerializedNode}
+     */
     const hamt = [map, data]
     if (this.depth !== 0) {
       return hamt
     }
-    /** @type {SerializedElement} */
+    /**
+     * @ignore
+     * @type {SerializedElement}
+     */
     return {
       hashAlg: this.config.hashAlg,
       bucketSize: this.config.bucketSize,
@@ -730,6 +758,7 @@ class IAMap {
 
 /**
  * store a new node and assign it an ID
+ * @ignore
  * @template T
  * @param {Store<T>} store
  * @param {IAMap<T>} newNode
@@ -746,11 +775,12 @@ async function save (store, newNode) {
  * { bucket: { found: true, elementAt, element, bucketIndex, bucketEntry } }
  * { bucket: { found: false, elementAt, element } }
  * { link: { elementAt, element } }
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {number} bitpos
  * @param {Uint8Array} key
- * @returns {{ data?: { found: boolean, elementAt: number, element: Element, bucketIndex?: number, bucketEntry?: KV }, link?: { elementAt: number, element: Element } }}
+ * @returns {FoundElement}
  */
 function findElement (node, bitpos, key) {
   const elementAt = index(node.map, bitpos)
@@ -771,6 +801,7 @@ function findElement (node, bitpos, key) {
 
 /**
  * new element for this node, i.e. first time this hash portion has been seen here
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {number} bitpos
@@ -788,6 +819,7 @@ async function addNewElement (node, bitpos, key, value) {
 
 /**
  * update an existing bucket with a new k/v pair
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {number} elementAt
@@ -822,6 +854,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
 
 /**
  * overflow of a bucket means it has to be replaced with a child node, tricky surgery
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {number} elementAt
@@ -846,6 +879,7 @@ async function replaceBucketWithNode (node, elementAt) {
 
 /**
  * similar to addNewElement() but for new child nodes
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {number} elementAt
@@ -863,6 +897,7 @@ async function updateNode (node, elementAt, newChild) {
 // take a node, extract all of its local entries and put them into a new node with a single
 // bucket; used for collapsing a node and sending it upward
 /**
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {Uint8Array} hash
@@ -873,7 +908,10 @@ async function updateNode (node, elementAt, newChild) {
 function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
   const newMap = setBit(new Uint8Array(node.map.length), mask(hash, 0, node.config.bitWidth), true)
-  /** @type {KV[]} */
+  /**
+   * @ignore
+   * @type {KV[]}
+   */
   const newBucket = node.data.reduce((/** @type {KV[]} */ p, /** @type {Element} */ c, /** @type {number} */ i) => {
     if (i === elementAt) {
       /* c8 ignore next 3 */
@@ -903,7 +941,8 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
 
 // simple delete from an existing bucket in this node
 /**
- * @param {readonly Element[]} data
+ * @ignore
+ * @param {ReadonlyElement} data
  * @param {number} elementAt
  * @param {boolean} lastInBucket
  * @param {number} bucketIndex
@@ -935,6 +974,7 @@ function removeFromBucket (data, elementAt, lastInBucket, bucketIndex) {
 /**
  * a node has bubbled up from a recursive delete() and we need to extract its
  * contents and insert it into ours
+ * @ignore
  * @template T
  * @param {IAMap<T>} node
  * @param {number} bitpos
@@ -959,11 +999,15 @@ async function collapseNodeInline (node, bitpos, newNode) {
 }
 
 /**
+ * @ignore
  * @param {Options} [options]
  * @returns {Config}
  */
 function buildConfig (options) {
-  /** @type {Config} */
+  /**
+   * @ignore
+   * @type {Config}
+   */
   const config = {}
 
   if (!options) {
@@ -1065,7 +1109,10 @@ function isSerializable (serializable) {
  * @returns {IAMap<T>}
  */
 function fromSerializable (store, id, serializable, options, depth = 0) {
-  /** @type {[Uint8Array, any[]]} */
+  /**
+   * @ignore
+   * @type {SerializedNode}
+   */
   let hamt
   if (depth === 0) { // even if options were supplied, ignore them and use what's in the serializable
     if (!isRootSerializable(serializable)) {
@@ -1089,6 +1136,7 @@ function fromSerializable (store, id, serializable, options, depth = 0) {
 }
 
 /**
+ * @ignore
  * @param {any} serializable
  * @returns {Config}
  */
@@ -1112,15 +1160,17 @@ IAMap.isIAMap = function isIAMap (node) {
 /**
  * internal utility to fetch a map instance's hash function
  *
+ * @ignore
  * @template T
  * @param {IAMap<T>} map
- * @returns {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)}
+ * @returns {Hasher}
  */
 function hasher (map) {
   return hasherRegistry[map.config.hashAlg].hasher
 }
 
 /**
+ * @ignore
  * @param {Uint8Array} b1
  * @param {Uint8Array} b2
  * @returns {number}

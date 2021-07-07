@@ -97,14 +97,13 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 
 ### Contents
 
- * [`assert(condition, message?)`](#assert)
- * [`async iamap.create(store, options)`](#iamap__create)
- * [`async iamap.load(store, id)`](#iamap__load)
+ * [`async iamap.create(store, options[, map][, depth][, data])`](#iamap__create)
+ * [`async iamap.load(store, id[, depth][, options])`](#iamap__load)
  * [`iamap.registerHasher(hashAlg, hashBytes, hasher)`](#iamap__registerHasher)
- * [`async IAMap#set(key, value)`](#IAMap_set)
- * [`async IAMap#get(key)`](#IAMap_get)
+ * [`async IAMap#set(key, value[, _cachedHash])`](#IAMap_set)
+ * [`async IAMap#get(key[, _cachedHash])`](#IAMap_get)
  * [`async IAMap#has(key)`](#IAMap_has)
- * [`async IAMap#delete(key)`](#IAMap_delete)
+ * [`async IAMap#delete(key[, _cachedHash])`](#IAMap_delete)
  * [`async IAMap#size()`](#IAMap_size)
  * [`async * IAMap#keys()`](#IAMap_keys)
  * [`async * IAMap#values()`](#IAMap_values)
@@ -114,21 +113,16 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`IAMap#directEntryCount()`](#IAMap_directEntryCount)
  * [`IAMap#directNodeCount()`](#IAMap_directNodeCount)
  * [`async IAMap#isInvariant()`](#IAMap_isInvariant)
- * [`IAMap#fromChildSerializable(store, id, serializable[, depth])`](#IAMap_fromChildSerializable)
+ * [`IAMap#fromChildSerializable(id, serializable[, depth])`](#IAMap_fromChildSerializable)
  * [`iamap.isRootSerializable(serializable)`](#iamap__isRootSerializable)
  * [`iamap.isSerializable(serializable)`](#iamap__isSerializable)
  * [`iamap.fromSerializable(store, id, serializable[, options][, depth])`](#iamap__fromSerializable)
-
-<a name="assert"></a>
-### `assert(condition, message?)`
-
-* `condition` `(boolean)`
-* `message?` `(string)`
+ * [`IAMap.isIAMap(node)`](#IAMap__isIAMap)
 
 <a name="iamap__create"></a>
-### `async iamap.create(store, options)`
+### `async iamap.create(store, options[, map][, depth][, data])`
 
-* `store` `(Object)`: A backing store for this Map. The store should be able to save and load a serialised
+* `store` `(Store<T>)`: A backing store for this Map. The store should be able to save and load a serialised
   form of a single node of a IAMap which is provided as a plain object representation. `store.save(node)` takes
   a serialisable node and should return a content address / ID for the node. `store.load(id)` serves the inverse
   purpose, taking a content address / ID as provided by a `save()` operation and returning the serialised form
@@ -143,19 +137,26 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
   to determine that an inline child node exists at the data element.
   The `store` object should take the following form:
   `{ async save(node):id, async load(id):node, isEqual(id,id):boolean, isLink(obj):boolean }`
-* `options` `(Object)`: Options for this IAMap
-  * `options.hashAlg` `(number)`: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
-    hash function identifier, e.g. `0x23` for `murmur3-32`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
-  * `options.bitWidth` `(number, optional, default=`8`)`: The number of bits to extract from the hash to form a data element index at
-    each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
-    each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
-    determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
-    produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
-    currently allowed is `8` which will store 256 data elements in each node.
-  * `options.bucketSize` `(number, optional, default=`5`)`: The maximum number of collisions acceptable at each level of the Map. A
-    collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
-    bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
-    pushed
+  A `store` should throw an appropriately informative error when a node that is requested does not exist in the backing
+  store.
+  
+  Options:
+    - hashAlg (number) - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv)
+      hash function identifier, e.g. `0x23` for `murmur3-32`. Hash functions must be registered with [`iamap.registerHasher`](#iamap__registerHasher).
+    - bitWidth (number, default 8) - The number of bits to extract from the hash to form a data element index at
+      each level of the Map, e.g. a bitWidth of 5 will extract 5 bits to be used as the data element index, since 2^5=32,
+      each node will store up to 32 data elements (child nodes and/or entry buckets). The maximum depth of the Map is
+      determined by `floor((hashBytes * 8) / bitWidth)` where `hashBytes` is the number of bytes the hash function
+      produces, e.g. `hashBytes=32` and `bitWidth=5` yields a maximum depth of 51 nodes. The maximum `bitWidth`
+      currently allowed is `8` which will store 256 data elements in each node.
+    - bucketSize (number, default  5) - The maximum number of collisions acceptable at each level of the Map. A
+      collision in the `bitWidth` index at a given depth will result in entries stored in a bucket (array). Once the
+      bucket exceeds `bucketSize`, a new child node is created for that index and all entries in the bucket are
+      pushed
+* `options` `(Options)`: Options for this IAMap
+* `map` `(Uint8Array, optional)`: for internal use
+* `depth` `(number, optional)`: for internal use
+* `data` `(Element[], optional)`: for internal use
 
 ```js
 let map = await iamap.create(store, options)
@@ -165,10 +166,12 @@ Create a new IAMap instance with a backing store. This operation is asynchronous
 resolves to a `IAMap` instance.
 
 <a name="iamap__load"></a>
-### `async iamap.load(store, id)`
+### `async iamap.load(store, id[, depth][, options])`
 
-* `store` `(Object)`: A backing store for this Map. See [`iamap.create`](#iamap__create).
-* `id`: An content address / ID understood by the backing `store`.
+* `store` `(Store<T>)`: A backing store for this Map. See [`iamap.create`](#iamap__create).
+* `id` `(any)`: An content address / ID understood by the backing `store`.
+* `depth` `(number, optional, default=`0`)`
+* `options` `(Options, optional)`
 
 ```js
 let map = await iamap.load(store, id)
@@ -182,8 +185,9 @@ Create a IAMap instance loaded from a serialised form in a backing store. See [`
 * `hashAlg` `(number)`: A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
   function identifier **number**, e.g. `0x23` for `murmur3-32`.
 * `hashBytes` `(number)`: The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
-* `hasher` `(function)`: A hash function that takes a `Uint8Array` derived from the `key` values used for this
-  Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value).
+* `hasher` `(Hasher)`: A hash function that takes a `Uint8Array` derived from the `key` values used for this
+  Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
+  may or may not be asynchronous but will be called with an `await`.
 
 ```js
 iamap.registerHasher(hashAlg, hashBytes, hasher)
@@ -193,25 +197,27 @@ Register a new hash function. IAMap has no hash functions by default, at least o
 IAMap.
 
 <a name="IAMap_set"></a>
-### `async IAMap#set(key, value)`
+### `async IAMap#set(key, value[, _cachedHash])`
 
-* `key` `(string|array|Uint8Array)`: A key for the `value` being set whereby that same `value` may
+* `key` `(string|Uint8Array)`: A key for the `value` being set whereby that same `value` may
   be retrieved with a `get()` operation with the same `key`. The type of the `key` object should either be a
   `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
 * `value` `(any)`: Any value that can be stored in the backing store. A value could be a serialisable object
   or an address or content address or other kind of link to the actual value.
+* `_cachedHash` `(Uint8Array, optional)`: for internal use
 
-* Returns:  `Promise<IAMap>`: A `Promise` containing a new `IAMap` that contains the new key/value pair.
+* Returns:  `Promise<IAMap<T>>`: A `Promise` containing a new `IAMap` that contains the new key/value pair.
 
 Asynchronously create a new `IAMap` instance identical to this one but with `key` set to `value`.
 
 <a name="IAMap_get"></a>
-### `async IAMap#get(key)`
+### `async IAMap#get(key[, _cachedHash])`
 
-* `key` `(string|array|Uint8Array)`: A key for the value being sought. See [`IAMap#set`](#IAMap_set) for
+* `key` `(string|Uint8Array)`: A key for the value being sought. See [`IAMap#set`](#IAMap_set) for
   details about acceptable `key` types.
+* `_cachedHash` `(Uint8Array, optional)`: for internal use
 
-* Returns:  `Promise`: A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
+* Returns:  `Promise<any>`: A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
   key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
 
 Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
@@ -219,7 +225,7 @@ Asynchronously find and return a value for the given `key` if it exists within t
 <a name="IAMap_has"></a>
 ### `async IAMap#has(key)`
 
-* `key` `(string|array|Uint8Array)`: A key to check for existence within this `IAMap`. See
+* `key` `(string|Uint8Array)`: A key to check for existence within this `IAMap`. See
   [`IAMap#set`](#IAMap_set) for details about acceptable `key` types.
 
 * Returns:  `Promise<boolean>`: A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
@@ -228,12 +234,13 @@ Asynchronously find and return a value for the given `key` if it exists within t
 Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
 
 <a name="IAMap_delete"></a>
-### `async IAMap#delete(key)`
+### `async IAMap#delete(key[, _cachedHash])`
 
-* `key` `(string|array|Uint8Array)`: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
+* `key` `(string|Uint8Array)`: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
   acceptable `key` types.
+* `_cachedHash` `(Uint8Array, optional)`: for internal use
 
-* Returns:  `Promise<IAMap>`: A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
+* Returns:  `Promise<IAMap<T>>`: A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
   instance if `key` does not exist within it.
 
 Asynchronously create a new `IAMap` instance identical to this one but with `key` and its associated
@@ -249,7 +256,7 @@ Asynchronously count the number of key/value pairs contained within this `IAMap`
 <a name="IAMap_keys"></a>
 ### `async * IAMap#keys()`
 
-* Returns:  `AsyncIterator`: An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
+* Returns:  `AsyncGenerator<Uint8Array>`: An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
   format they were inserted via `set()`.
 
 Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
@@ -258,7 +265,7 @@ traversal of all nodes.
 <a name="IAMap_values"></a>
 ### `async * IAMap#values()`
 
-* Returns:  `AsyncIterator`: An async iterator that yields values.
+* Returns:  `AsyncGenerator<any>`: An async iterator that yields values.
 
 Asynchronously emit all values that exist within this `IAMap`, including its children. This will cause a full
 traversal of all nodes.
@@ -266,7 +273,7 @@ traversal of all nodes.
 <a name="IAMap_entries"></a>
 ### `async * IAMap#entries()`
 
-* Returns:  `AsyncIterator`: An async iterator that yields objects with the properties `key` and `value`.
+* Returns:  `AsyncGenerator<{key: Uint8Array, value: any}>`: An async iterator that yields objects with the properties `key` and `value`.
 
 Asynchronously emit all { key, value } pairs that exist within this `IAMap`, including its children. This will
 cause a full traversal of all nodes.
@@ -274,7 +281,7 @@ cause a full traversal of all nodes.
 <a name="IAMap_ids"></a>
 ### `async * IAMap#ids()`
 
-* Returns:  `AsyncIterator`: An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
+* Returns:  `AsyncGenerator<any>`: An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
   determined by the backing store which is responsible for generating IDs upon `save()` operations.
 
 Asynchronously emit the IDs of this `IAMap` and all of its children.
@@ -282,7 +289,7 @@ Asynchronously emit the IDs of this `IAMap` and all of its children.
 <a name="IAMap_toSerializable"></a>
 ### `IAMap#toSerializable()`
 
-* Returns:  `Object`: An object representing the internal state of this local `IAMap` node, including its links to child nodes
+* Returns:  `SerializedNode|SerializedRoot`: An object representing the internal state of this local `IAMap` node, including its links to child nodes
   if any.
 
 Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
@@ -303,20 +310,18 @@ Root node form:
 {
   hashAlg: number
   bucketSize: number
-  map: Uint8Array
-  data: Array
+  hamt: [Uint8Array, Array]
 }
 ```
 
 Intermediate and leaf node form:
 ```
-{
-  map: Uint8Array
-  data: Array
-}
+[Uint8Array, Array]
 ```
 
-Where `data` is an array of a mix of either buckets or links:
+The `Uint8Array` in both forms is the 'map' used to identify the presence of an element in this node.
+
+The second element in the tuple in both forms, `Array`, is an elements array a mix of either buckets or links:
 
 * A bucket is an array of two elements, the first being a `key` of type `Uint8Array` and the second a `value`
   or whatever type has been provided in `set()` operations for this `IAMap`.
@@ -353,11 +358,10 @@ scan of nodes and therefore incurs a load and deserialisation cost for each chil
 A `false` result from this method suggests a flaw in the implemetation.
 
 <a name="IAMap_fromChildSerializable"></a>
-### `IAMap#fromChildSerializable(store, id, serializable[, depth])`
+### `IAMap#fromChildSerializable(id, serializable[, depth])`
 
-* `store` `(Object)`: A backing store for this Map. See [`iamap.create`](#iamap__create).
-* `id` `(Object)`: An optional ID for the instantiated IAMap node. See [`iamap.fromSerializable`](#iamap__fromSerializable).
-* `serializable` `(Object)`: The serializable form of an IAMap node to be instantiated.
+* `id` `(any)`: An optional ID for the instantiated IAMap node. See [`iamap.fromSerializable`](#iamap__fromSerializable).
+* `serializable` `(any)`: The serializable form of an IAMap node to be instantiated.
 * `depth` `(number, optional, default=`0`)`: The depth of the IAMap node. See [`iamap.fromSerializable`](#iamap__fromSerializable).
 
 A convenience shortcut to [`iamap.fromSerializable`](#iamap__fromSerializable) that uses this IAMap node instance's backing `store` and
@@ -366,7 +370,7 @@ configuration `options`. Intended to be used to instantiate child IAMap nodes fr
 <a name="iamap__isRootSerializable"></a>
 ### `iamap.isRootSerializable(serializable)`
 
-* `serializable` `(Object)`: An object that may be a serialisable form of an IAMap root node
+* `serializable` `(any)`: An object that may be a serialisable form of an IAMap root node
 
 * Returns:  `boolean`: An indication that the serialisable form is or is not an IAMap root node
 
@@ -376,7 +380,7 @@ an IAMap before trying to instantiate it.
 <a name="iamap__isSerializable"></a>
 ### `iamap.isSerializable(serializable)`
 
-* `serializable` `(Object)`: An object that may be a serialisable form of an IAMap node
+* `serializable` `(any)`: An object that may be a serialisable form of an IAMap node
 
 * Returns:  `boolean`: An indication that the serialisable form is or is not an IAMap node
 
@@ -387,16 +391,18 @@ This should pass for both root nodes as well as child nodes
 <a name="iamap__fromSerializable"></a>
 ### `iamap.fromSerializable(store, id, serializable[, options][, depth])`
 
-* `store` `(Object)`: A backing store for this Map. See [`iamap.create`](#iamap__create).
-* `id` `(Object)`: An optional ID for the instantiated IAMap node. Unlike [`iamap.create`](#iamap__create),
+* `store` `(Store<T>)`: A backing store for this Map. See [`iamap.create`](#iamap__create).
+* `id` `(any)`: An optional ID for the instantiated IAMap node. Unlike [`iamap.create`](#iamap__create),
   `fromSerializable()` does not `save()` a newly created IAMap node so an ID is not generated for it. If one is
   required for downstream purposes it should be provided, if the value is `null` or `undefined`, `node.id` will
   be `null` but will remain writable.
-* `serializable` `(Object)`: The serializable form of an IAMap node to be instantiated
-* `options` `(Object, optional, default=`null`)`: An options object for IAMap child node instantiation. Will be ignored for root
+* `serializable` `(any)`: The serializable form of an IAMap node to be instantiated
+* `options` `(Options, optional, default=`null`)`: An options object for IAMap child node instantiation. Will be ignored for root
   node instantiation (where `depth` = `0`) See [`iamap.create`](#iamap__create).
 * `depth` `(number, optional, default=`0`)`: The depth of the IAMap node. Where `0` is the root node and any `>0` number is a child
   node.
+
+* Returns:  `IAMap<T>`
 
 Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
 produced by [`IAMap#toSerializable`](#IAMap_toSerializable).
@@ -404,6 +410,13 @@ Serialised forms of root nodes must satisfy both [`iamap.isRootSerializable`](#i
 root nodes, the `options` parameter will be ignored and the `depth` parameter must be the default value of `0`.
 Serialised forms of non-root nodes must satisfy [`iamap.isSerializable`](#iamap__isSerializable) and have a valid `options` parameter and
 a non-`0` `depth` parameter.
+
+<a name="IAMap__isIAMap"></a>
+### `IAMap.isIAMap(node)`
+
+* `node` `(IAMap<T>|any)`
+
+* Returns:  `boolean`
 
 ## License and Copyright
 

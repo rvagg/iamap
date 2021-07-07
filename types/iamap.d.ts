@@ -8,6 +8,26 @@ export type SerializedKV = import('./interface').SerializedKV;
 export type SerializedElement = import('./interface').SerializedElement;
 export type SerializedNode = import('./interface').SerializedNode;
 export type SerializedRoot = import('./interface').SerializedRoot;
+export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
+export type Registry = {
+    hasher: Hasher;
+    hashBytes: number;
+}[];
+export type IsLink = (link: any) => boolean;
+export type ReadonlyElement = readonly Element[];
+export type FoundElement = {
+    data?: {
+        found: boolean;
+        elementAt: number;
+        element: Element;
+        bucketIndex?: number;
+        bucketEntry?: KV;
+    };
+    link?: {
+        elementAt: number;
+        element: Element;
+    };
+};
 /**
  * ```js
  * let map = await iamap.create(store, options)
@@ -88,11 +108,11 @@ export function load<T>(store: import("./interface").Store<T>, id: any, depth?: 
  * @param {number} hashAlg - A [multicodec](https://github.com/multiformats/multicodec/blob/master/table.csv) hash
  * function identifier **number**, e.g. `0x23` for `murmur3-32`.
  * @param {number} hashBytes - The number of bytes to use from the result of the `hasher()` function (e.g. `32`)
- * @param {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
+ * @param {Hasher} hasher - A hash function that takes a `Uint8Array` derived from the `key` values used for this
  * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
  * may or may not be asynchronous but will be called with an `await`.
  */
-export function registerHasher(hashAlg: number, hashBytes: number, hasher: (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>)): void;
+export function registerHasher(hashAlg: number, hashBytes: number, hasher: Hasher): void;
 /**
  * Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
  * produced by {@link IAMap#toSerializable}.
@@ -172,13 +192,19 @@ export class IAMap<T> {
      */
     constructor(store: Store<T>, options?: import("./interface").Options | undefined, map?: Uint8Array | undefined, depth?: number | undefined, data?: Element[] | undefined);
     store: import("./interface").Store<T>;
-    /** @type {any|null} */
+    /**
+     * @ignore
+     * @type {any|null}
+     */
     id: any | null;
     config: import("./interface").Config;
     map: Uint8Array;
     depth: number;
-    /** @type {readonly Element[]} */
-    data: readonly Element[];
+    /**
+     * @ignore
+     * @type {ReadonlyElement}
+     */
+    data: ReadonlyElement;
     /**
      * Asynchronously create a new `IAMap` instance identical to this one but with `key` set to `value`.
      *
@@ -353,8 +379,18 @@ export namespace IAMap {
      */
     function isIAMap<T_1>(node: any): boolean;
 }
+/**
+ * internal utility to fetch a map instance's hash function
+ *
+ * @ignore
+ * @template T
+ * @param {IAMap<T>} map
+ * @returns {Hasher}
+ */
+declare function hasher<T>(map: IAMap<T>): Hasher;
 declare class Element {
     /**
+     * @ignore
      * @param {KV[]} [bucket]
      * @param {any} [link]
      */
@@ -362,20 +398,26 @@ declare class Element {
     bucket: KV[] | null;
     link: any;
     /**
+     * @ignore
      * @returns {SerializedElement}
      */
     toSerializable(): SerializedElement;
 }
 declare namespace Element {
     /**
-     * @param {(link:any)=>boolean} isLink
+     * @ignore
+     * @param {IsLink} isLink
      * @param {any} obj
      * @returns {Element}
      */
-    function fromSerializable(isLink: (link: any) => boolean, obj: any): Element;
+    function fromSerializable(isLink: IsLink, obj: any): Element;
 }
+/**
+ * @ignore
+ */
 declare class KV {
     /**
+     * @ignore
      * @param {Uint8Array} key
      * @param {any} value
      */
@@ -383,12 +425,14 @@ declare class KV {
     key: Uint8Array;
     value: any;
     /**
+     * @ignore
      * @returns {SerializedKV}
      */
     toSerializable(): import("./interface").SerializedKV;
 }
 declare namespace KV {
     /**
+     * @ignore
      * @param {SerializedKV} obj
      * @returns {KV}
      */
