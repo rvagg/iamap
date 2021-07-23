@@ -1,3 +1,10 @@
+### [2.0.2](https://github.com/rvagg/iamap/compare/v2.0.1...v2.0.2) (2021-07-23)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump @types/mocha from 8.2.3 to 9.0.0 ([2914eed](https://github.com/rvagg/iamap/commit/2914eededad1846e66f6e5feb743b00258708783))
+
 ### [2.0.1](https://github.com/rvagg/iamap/compare/v2.0.0...v2.0.1) (2021-07-20)
 
 
