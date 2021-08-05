@@ -1,3 +1,10 @@
+### [2.0.4](https://github.com/rvagg/iamap/compare/v2.0.3...v2.0.4) (2021-08-05)
+
+
+### Trivial Changes
+
+* **deps:** bump actions/setup-node from 2.3.1 to 2.3.2 ([f59a212](https://github.com/rvagg/iamap/commit/f59a2125d6de575b51b1c7e2a6673a8646891eb1))
+
 ### [2.0.3](https://github.com/rvagg/iamap/compare/v2.0.2...v2.0.3) (2021-08-03)
 
 
