@@ -1,7 +1,7 @@
 // store using a link type `T`
 export interface Store<T> {
-  save(node: any): T,
-  load(id: T): any,
+  save(node: any): Promise<T>,
+  load(id: T): Promise<any>,
   isLink(link: T): boolean,
   isEqual(link1: T, link2: T): boolean,
 }
