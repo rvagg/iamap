@@ -1,3 +1,10 @@
+### [2.0.6](https://github.com/rvagg/iamap/compare/v2.0.5...v2.0.6) (2021-09-16)
+
+
+### Bug Fixes
+
+* correctly type save() and load() types as async ([da03346](https://github.com/rvagg/iamap/commit/da03346cb419143f81eeead536f82536c8f5580f)), closes [#22](https://github.com/rvagg/iamap/issues/22)
+
 ### [2.0.5](https://github.com/rvagg/iamap/compare/v2.0.4...v2.0.5) (2021-08-05)
 
 
