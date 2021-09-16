@@ -19,10 +19,10 @@ iamap.registerHasher(0x00 /* 'identity' */, 32, identityHasher) // not recommend
 // absolutely not recommended
 /** @type {Store} */
 const devnull = {
-  save (_) {
+  async save (_) {
     return 0
   },
-  load (_) {
+  async load (_) {
     throw new Error('unimplemented')
   },
   isEqual () {

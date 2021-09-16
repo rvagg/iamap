@@ -50,7 +50,7 @@ function memoryStore () {
     map: new Map(),
     saves: 0,
     loads: 0,
-    save (obj) { // this can be async
+    async save (obj) {
       const id = hash(obj)
       this.map.set(id, obj)
       this.saves++
