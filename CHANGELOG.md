@@ -1,3 +1,10 @@
+### [2.0.8](https://github.com/rvagg/iamap/compare/v2.0.7...v2.0.8) (2021-10-18)
+
+
+### Trivial Changes
+
+* **deps:** bump actions/checkout from 2.3.4 to 2.3.5 ([990cdc0](https://github.com/rvagg/iamap/commit/990cdc0a0140a894be67c8228ccbcb3764680879))
+
 ### [2.0.7](https://github.com/rvagg/iamap/compare/v2.0.6...v2.0.7) (2021-09-28)
 
 
