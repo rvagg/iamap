@@ -100,6 +100,20 @@ async function create (store, options, map, depth, data) {
 }
 
 /**
+ *
+ * Create a IAMap inner node at positive, nonzero depth.
+ *
+ * @name iamap.load
+ * @function
+ * @async
+ * @template T
+ * @param {Store<T>} store - A backing store for this Map. See {@link iamap.create}.
+ * @param {any} id - An content address / ID understood by the backing `store`.
+ * @param {number} [depth=0]
+ * @param {Options} [options]
+ *
+ * //**
+ *
  * ```js
  * let map = await iamap.load(store, id)
  * ```
@@ -112,8 +126,8 @@ async function create (store, options, map, depth, data) {
  * @template T
  * @param {Store<T>} store - A backing store for this Map. See {@link iamap.create}.
  * @param {any} id - An content address / ID understood by the backing `store`.
- * @param {number} [depth=0]
- * @param {Options} [options]
+ * @param {0 | undefined} [depth=0]
+ * @param {AbortOptions} [options]
  */
 async function load (store, id, depth = 0, options) {
   // depth and options are internal arguments that the user doesn't need to interact with

@@ -81,11 +81,11 @@ describe('Errors', () => {
     const signal = controller.signal
     let map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     map = await map.set('foo', 'bar', { signal: controller.signal })
-    map = await iamap.load(store, map.id, undefined, { hashAlg: 0x23, signal })
+    map = await iamap.load(store, map.id, undefined, { signal })
     assert.strictEqual(await map.get('foo', { signal }), 'bar')
 
     store.getStuck()
-    const assertion = assert.isRejected(iamap.load(store, map.id, undefined, { hashAlg: 0x23, signal }), 'Aborted')
+    const assertion = assert.isRejected(iamap.load(store, map.id, undefined, { signal }), 'Aborted')
     controller.abort()
     await assertion
     assert.isRejected(map.set('bar', 'baz', { signal }), 'Aborted')
