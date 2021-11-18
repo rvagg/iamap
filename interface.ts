@@ -6,10 +6,10 @@ export interface Store<T> {
   isEqual(link1: T, link2: T): boolean,
 }
 
-export interface Options {
+export interface Options extends AbortOptions {
   bitWidth?: number,
   bucketSize?: number,
-  hashAlg: number
+  hashAlg?: number
 }
 
 export interface Config {
