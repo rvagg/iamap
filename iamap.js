@@ -363,7 +363,7 @@ class IAMap {
           return updateBucket(this, data.elementAt, -1, key, value, options)
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, link.element.link, this.depth + 1, addOptions(this.config, options))
         assert(!!child)
         const newChild = await child.set(key, value, options, hash)
         return updateNode(this, link.elementAt, newChild, options)
@@ -405,7 +405,7 @@ class IAMap {
         }
         return undefined // not found
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, link.element.link, this.depth + 1, addOptions(this.config, options))
         assert(!!child)
         return await child.get(key, options, hash)
         /* c8 ignore next 3 */
@@ -486,14 +486,14 @@ class IAMap {
             if (lastInBucket) {
               newMap = setBit(newMap, bitpos, false)
             }
-            return create(this.store, { ...this.config, signal: options?.signal }, newMap, this.depth, newData)
+            return create(this.store, addOptions(this.config, options), newMap, this.depth, newData)
           }
         } else {
           // key would be located here according to hash, but we don't have it
           return this
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, link.element.link, this.depth + 1, addOptions(this.config, options))
         assert(!!child)
         const newChild = await child.delete(key, options, hash)
         if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
@@ -539,7 +539,7 @@ class IAMap {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
         c += await child.size()
       }
     }
@@ -562,7 +562,7 @@ class IAMap {
           yield kv.key
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
         yield * child.keys()
       }
     }
@@ -585,7 +585,7 @@ class IAMap {
           yield kv.value
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
         yield * child.values()
       }
     }
@@ -608,7 +608,7 @@ class IAMap {
           yield { key: kv.key, value: kv.value }
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
         yield * child.entries()
       }
     }
@@ -627,7 +627,7 @@ class IAMap {
     yield this.id
     for (const e of this.data) {
       if (e.link) {
-        const child = await load(this.store, e.link, this.depth + 1, { ...this.config, signal: options?.signal })
+        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
         yield * child.ids()
       }
     }
@@ -825,7 +825,7 @@ async function addNewElement (node, bitpos, key, value, options) {
   const newData = node.data.slice()
   newData.splice(insertAt, 0, new Element([new KV(key, value)]))
   const newMap = setBit(node.map, bitpos, true)
-  return create(node.store, { ...node.config, signal: options?.signal }, newMap, node.depth, newData)
+  return create(node.store, addOptions(node.config, options), newMap, node.depth, newData)
 }
 
 /**
@@ -861,7 +861,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value, options) {
   }
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, { ...node.config, signal: options?.signal }, node.map, node.depth, newData)
+  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
 }
 
 /**
@@ -887,7 +887,7 @@ async function replaceBucketWithNode (node, elementAt, options) {
   newNode = await save(node.store, newNode, options)
   const newData = node.data.slice()
   newData[elementAt] = new Element(undefined, newNode.id)
-  return create(node.store, { ...node.config, signal: options?.signal }, node.map, node.depth, newData)
+  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
 }
 
 /**
@@ -905,7 +905,7 @@ async function updateNode (node, elementAt, newChild, options) {
   const newElement = new Element(undefined, newChild.id)
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, { ...node.config, signal: options?.signal }, node.map, node.depth, newData)
+  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
 }
 
 // take a node, extract all of its local entries and put them into a new node with a single
@@ -951,7 +951,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex, options) 
   }, /** @type {KV[]} */ [])
   newBucket.sort((a, b) => byteCompare(a.key, b.key))
   const newElement = new Element(newBucket)
-  return create(node.store, { ...node.config, signal: options?.signal }, newMap, 0, [newElement])
+  return create(node.store, addOptions(node.config, options), newMap, 0, [newElement])
 }
 
 // simple delete from an existing bucket in this node
@@ -1011,7 +1011,7 @@ async function collapseNodeInline (node, bitpos, newNode, options) {
   const newData = node.data.slice()
   newData[elementIndex] = newElement
 
-  return create(node.store, { ...node.config, signal: options?.signal }, node.map, node.depth, newData)
+  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
 }
 
 /**
@@ -1068,6 +1068,16 @@ function buildConfig (options) {
   }
 
   return config
+}
+
+/**
+ * @ignore
+ * @param {Config} config
+ * @param {AbortOptions} [options]
+ * @returns {Options & AbortOptions}
+ */
+function addOptions (config, options) {
+  return { ...config, signal: options == null ? undefined : options.signal }
 }
 
 /**
