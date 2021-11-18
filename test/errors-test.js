@@ -70,9 +70,9 @@ describe('Errors', () => {
     await assert.isFulfilled(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 2 }))
     await assert.isFulfilled(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 16 }))
     // @ts-ignore
-    await assert.isRejected(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 16 }, 'blerk'))
-    await assert.isRejected(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 10, bucketSize: 16 }, new Uint8Array(2)))
-    await assert.isFulfilled(iamap.create(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 10, bucketSize: 16 }, new Uint8Array((2 ** 10) / 8)))
+    await assert.isRejected(iamap.createInternal(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 4, bucketSize: 16 }, 'blerk'))
+    await assert.isRejected(iamap.createInternal(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 10, bucketSize: 16 }, new Uint8Array(2)))
+    await assert.isFulfilled(iamap.createInternal(devnull, { hashAlg: 0x00 /* 'identity' */, bitWidth: 10, bucketSize: 16 }, new Uint8Array((2 ** 10) / 8)))
   })
 
   it('test abort signal', async () => {
@@ -81,11 +81,11 @@ describe('Errors', () => {
     const signal = controller.signal
     let map = await iamap.create(store, { hashAlg: 0x23 /* 'murmur3-32' */ })
     map = await map.set('foo', 'bar', { signal: controller.signal })
-    map = await iamap.load(store, map.id, undefined, { signal })
+    map = await iamap.load(store, map.id, { signal })
     assert.strictEqual(await map.get('foo', { signal }), 'bar')
 
     store.getStuck()
-    const assertion = assert.isRejected(iamap.load(store, map.id, undefined, { signal }), 'Aborted')
+    const assertion = assert.isRejected(iamap.load(store, map.id, { signal }), 'Aborted')
     controller.abort()
     await assertion
     assert.isRejected(map.set('bar', 'baz', { signal }), 'Aborted')

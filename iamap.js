@@ -89,31 +89,31 @@ function assert (condition, message) {
  *     pushed
  *
  * @param {Options} options - Options for this IAMap
- * @param {Uint8Array} [map] - for internal use
- * @param {number} [depth] - for internal use
- * @param {Element[]} [data] - for internal use
  */
-async function create (store, options, map, depth, data) {
-  // map, depth and data are intended for internal use
-  const newNode = new IAMap(store, options, map, depth, data)
+async function create (store, options) {
+  const newNode = new IAMap(store, options)
   return save(store, newNode, options)
 }
 
 /**
+ * Internally used for creating internal HAMT nodes.
  *
- * Create a IAMap inner node at positive, nonzero depth.
- *
- * @name iamap.load
- * @function
  * @async
+ * @function
  * @template T
- * @param {Store<T>} store - A backing store for this Map. See {@link iamap.create}.
- * @param {any} id - An content address / ID understood by the backing `store`.
- * @param {number} [depth=0]
- * @param {Options} [options]
- *
- * //**
- *
+ * @param {Store<T>} store
+ * @param {Config} config
+ * @param {Uint8Array} [map]
+ * @param {number} [depth]
+ * @param {Element[]} [data]
+ * @param {AbortOptions} [options]
+ */
+async function createInternal (store, config, map, depth, data, options) {
+  const newNode = new IAMap(store, config, map, depth, data)
+  return save(store, newNode, options)
+}
+
+/**
  * ```js
  * let map = await iamap.load(store, id)
  * ```
@@ -126,16 +126,29 @@ async function create (store, options, map, depth, data) {
  * @template T
  * @param {Store<T>} store - A backing store for this Map. See {@link iamap.create}.
  * @param {any} id - An content address / ID understood by the backing `store`.
- * @param {0 | undefined} [depth=0]
  * @param {AbortOptions} [options]
  */
-async function load (store, id, depth = 0, options) {
-  // depth and options are internal arguments that the user doesn't need to interact with
-  if (depth !== 0 && (typeof options !== 'object' || options == null)) {
-    throw new Error('Cannot load() without options at depth > 0')
-  }
+async function load (store, id, options) {
   const serialized = await store.load(id, options)
-  return fromSerializable(store, id, serialized, options, depth)
+  // No need to pass a config/options at depth 0
+  return fromSerializable(store, id, serialized)
+}
+
+/**
+ * Internally used for loading internal HAMT nodes.
+ *
+ * @async
+ * @function
+ * @template T
+ * @param {Store<T>} store
+ * @param {any} id
+ * @param {number} depth
+ * @param {Config} config
+ * @param {AbortOptions} [options]
+ */
+async function loadInternal (store, id, depth, config, options) {
+  const serialized = await store.load(id, options)
+  return fromSerializable(store, id, serialized, config, depth)
 }
 
 /**
@@ -377,7 +390,7 @@ class IAMap {
           return updateBucket(this, data.elementAt, -1, key, value, options)
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, link.element.link, this.depth + 1, this.config, options)
         assert(!!child)
         const newChild = await child.set(key, value, options, hash)
         return updateNode(this, link.elementAt, newChild, options)
@@ -419,7 +432,7 @@ class IAMap {
         }
         return undefined // not found
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, link.element.link, this.depth + 1, this.config, options)
         assert(!!child)
         return await child.get(key, options, hash)
         /* c8 ignore next 3 */
@@ -500,14 +513,14 @@ class IAMap {
             if (lastInBucket) {
               newMap = setBit(newMap, bitpos, false)
             }
-            return create(this.store, addOptions(this.config, options), newMap, this.depth, newData)
+            return createInternal(this.store, this.config, newMap, this.depth, newData, options)
           }
         } else {
           // key would be located here according to hash, but we don't have it
           return this
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, link.element.link, this.depth + 1, this.config, options)
         assert(!!child)
         const newChild = await child.delete(key, options, hash)
         if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
@@ -553,7 +566,7 @@ class IAMap {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         c += await child.size()
       }
     }
@@ -576,7 +589,7 @@ class IAMap {
           yield kv.key
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.keys()
       }
     }
@@ -599,7 +612,7 @@ class IAMap {
           yield kv.value
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.values()
       }
     }
@@ -622,7 +635,7 @@ class IAMap {
           yield { key: kv.key, value: kv.value }
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.entries()
       }
     }
@@ -641,7 +654,7 @@ class IAMap {
     yield this.id
     for (const e of this.data) {
       if (e.link) {
-        const child = await load(this.store, e.link, this.depth + 1, addOptions(this.config, options))
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.ids()
       }
     }
@@ -839,7 +852,7 @@ async function addNewElement (node, bitpos, key, value, options) {
   const newData = node.data.slice()
   newData.splice(insertAt, 0, new Element([new KV(key, value)]))
   const newMap = setBit(node.map, bitpos, true)
-  return create(node.store, addOptions(node.config, options), newMap, node.depth, newData)
+  return createInternal(node.store, node.config, newMap, node.depth, newData, options)
 }
 
 /**
@@ -875,7 +888,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value, options) {
   }
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 /**
@@ -901,7 +914,7 @@ async function replaceBucketWithNode (node, elementAt, options) {
   newNode = await save(node.store, newNode, options)
   const newData = node.data.slice()
   newData[elementAt] = new Element(undefined, newNode.id)
-  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 /**
@@ -919,7 +932,7 @@ async function updateNode (node, elementAt, newChild, options) {
   const newElement = new Element(undefined, newChild.id)
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 // take a node, extract all of its local entries and put them into a new node with a single
@@ -965,7 +978,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex, options) 
   }, /** @type {KV[]} */ [])
   newBucket.sort((a, b) => byteCompare(a.key, b.key))
   const newElement = new Element(newBucket)
-  return create(node.store, addOptions(node.config, options), newMap, 0, [newElement])
+  return createInternal(node.store, node.config, newMap, 0, [newElement], options)
 }
 
 // simple delete from an existing bucket in this node
@@ -1025,7 +1038,7 @@ async function collapseNodeInline (node, bitpos, newNode, options) {
   const newData = node.data.slice()
   newData[elementIndex] = newElement
 
-  return create(node.store, addOptions(node.config, options), node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 /**
@@ -1082,16 +1095,6 @@ function buildConfig (options) {
   }
 
   return config
-}
-
-/**
- * @ignore
- * @param {Config} config
- * @param {AbortOptions} [options]
- * @returns {Options & AbortOptions}
- */
-function addOptions (config, options) {
-  return { ...config, signal: options == null ? undefined : options.signal }
 }
 
 /**
@@ -1239,7 +1242,9 @@ function byteCompare (b1, b2) {
 }
 
 module.exports.create = create
+module.exports.createInternal = createInternal
 module.exports.load = load
+module.exports.loadInternal = loadInternal
 module.exports.registerHasher = registerHasher
 module.exports.fromSerializable = fromSerializable
 module.exports.isSerializable = isSerializable

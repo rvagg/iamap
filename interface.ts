@@ -9,7 +9,7 @@ export interface Store<T> {
 export interface Options extends AbortOptions {
   bitWidth?: number,
   bucketSize?: number,
-  hashAlg?: number
+  hashAlg: number
 }
 
 export interface Config {

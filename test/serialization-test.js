@@ -69,7 +69,7 @@ describe('Serialization', () => {
     const emptySerialized = [dmap, []]
     const id = await store.save(emptySerialized)
 
-    const map = await iamap.load(store, id, 10, {
+    const map = await iamap.loadInternal(store, id, 10, {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 7,
       bucketSize: 30
@@ -134,7 +134,7 @@ describe('Serialization', () => {
     // @ts-ignore
     id = await store.save(emptySerialized)
     // @ts-ignore
-    await assert.isRejected(iamap.load(store, id, 'foo'))
+    await assert.isRejected(iamap.loadInternal(store, id, 'foo'))
 
     emptySerialized = Object.assign({}, emptySerialized) // clone
     // @ts-ignore
@@ -155,7 +155,7 @@ describe('Serialization', () => {
     /** @type {SerializedNode} */
     let emptyChildSerialized = [mapCopy, []]
     id = await store.save(emptyChildSerialized)
-    assert.isFulfilled(iamap.load(store, id, 32, {
+    assert.isFulfilled(iamap.loadInternal(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       bucketSize: 30
@@ -163,7 +163,7 @@ describe('Serialization', () => {
 
     emptyChildSerialized = /** @type {SerializedNode} */ (emptyChildSerialized.slice()) // clone
     id = await store.save(emptyChildSerialized)
-    await assert.isRejected(iamap.load(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
+    await assert.isRejected(iamap.loadInternal(store, id, 33, { // this is not OK for a bitWidth of 8 and hash bytes of 32
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       bucketSize: 30
@@ -245,21 +245,21 @@ describe('Serialization', () => {
       bucketSize: 30
     })) // no hashAlg
 
-    await assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.loadInternal(store, id, 32, {
       // @ts-ignore
       hashAlg: { yoiks: true },
       bitWidth: 8,
       bucketSize: 30
     })) // bad hashAlg
 
-    await assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.loadInternal(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       // @ts-ignore
       bitWidth: 'foo',
       bucketSize: 30
     })) // bad bitWidth
 
-    await assert.isRejected(iamap.load(store, id, 32, {
+    await assert.isRejected(iamap.loadInternal(store, id, 32, {
       hashAlg: 0x00 /* 'identity' */,
       bitWidth: 8,
       // @ts-ignore
