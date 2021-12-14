@@ -1,3 +1,11 @@
+### [2.0.10](https://github.com/rvagg/iamap/compare/v2.0.9...v2.0.10) (2021-12-14)
+
+
+### Trivial Changes
+
+* **no-release:** bump actions/setup-node from 2.4.1 to 2.5.0 ([#29](https://github.com/rvagg/iamap/issues/29)) ([88cdd7c](https://github.com/rvagg/iamap/commit/88cdd7ca6d906da8a54a34ff1c28b0b64d42cb51))
+* udpate deps, test in webpack5 ([#33](https://github.com/rvagg/iamap/issues/33)) ([7a3bde5](https://github.com/rvagg/iamap/commit/7a3bde5745ce5635507d4b452a8da4f8af1f3cef))
+
 ### [2.0.9](https://github.com/rvagg/iamap/compare/v2.0.8...v2.0.9) (2021-11-04)
 
 
