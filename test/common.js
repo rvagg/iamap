@@ -2,7 +2,7 @@
 
 // @ts-ignore
 const murmurhash3 = require('murmurhash3js-revisited')
-const assert = require('assert')
+const { assert } = require('chai')
 
 /**
  * @typedef {import('./interface').TestStore} TestStore
