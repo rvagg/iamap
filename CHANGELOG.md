@@ -1,3 +1,13 @@
+### [2.0.11](https://github.com/rvagg/iamap/compare/v2.0.10...v2.0.11) (2022-03-02)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 4.5.5 to 4.6.2 ([#37](https://github.com/rvagg/iamap/issues/37)) ([aeae491](https://github.com/rvagg/iamap/commit/aeae49162d02bd631ad7b31de53d3b19fa7d7cd0))
+* **no-release:** bump actions/checkout from 2.4.0 to 3 ([#36](https://github.com/rvagg/iamap/issues/36)) ([05c52c7](https://github.com/rvagg/iamap/commit/05c52c7baba29a90316eb16c076dc89485b3c9b0))
+* **no-release:** bump actions/setup-node from 2.5.0 to 2.5.1 ([#34](https://github.com/rvagg/iamap/issues/34)) ([db1abb1](https://github.com/rvagg/iamap/commit/db1abb1685f3f7c37ed761b0a6e5e658ce5eae1e))
+* **no-release:** bump actions/setup-node from 2.5.1 to 3.0.0 ([#35](https://github.com/rvagg/iamap/issues/35)) ([1599aaa](https://github.com/rvagg/iamap/commit/1599aaa962556237af30cecc8e384a646d3c3e6d))
+
 ### [2.0.10](https://github.com/rvagg/iamap/compare/v2.0.9...v2.0.10) (2021-12-14)
 
 
