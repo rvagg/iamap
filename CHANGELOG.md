@@ -1,3 +1,17 @@
+### [2.0.12](https://github.com/rvagg/iamap/compare/v2.0.11...v2.0.12) (2022-05-25)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 4.6.4 to 4.7.2 ([d3393c1](https://github.com/rvagg/iamap/commit/d3393c14b98403560cf5476a34f6852138104941))
+* **no-release:** bump actions/setup-node from 3.0.0 to 3.1.0 ([#38](https://github.com/rvagg/iamap/issues/38)) ([af574b6](https://github.com/rvagg/iamap/commit/af574b6a5c464560a52fd0f7653b075b44bdb639))
+* **no-release:** bump actions/setup-node from 3.1.0 to 3.1.1 ([#39](https://github.com/rvagg/iamap/issues/39)) ([1c75ab8](https://github.com/rvagg/iamap/commit/1c75ab80ceb7af55b80cbbb6d47df9e469d61fda))
+* **no-release:** bump actions/setup-node from 3.1.1 to 3.2.0 ([#44](https://github.com/rvagg/iamap/issues/44)) ([4df52e6](https://github.com/rvagg/iamap/commit/4df52e6df5815445157beaefefeece8eb815f9e9))
+* **no-release:** bump mocha from 9.2.2 to 10.0.0 ([#42](https://github.com/rvagg/iamap/issues/42)) ([38ea15a](https://github.com/rvagg/iamap/commit/38ea15a73ff054be9743e8cd9e7ebb1951abe8ed))
+* **no-release:** bump polendina from 2.0.15 to 3.0.0 ([#41](https://github.com/rvagg/iamap/issues/41)) ([b14f130](https://github.com/rvagg/iamap/commit/b14f130c832fa2d4010affd08b47b1521997ab8f))
+* **no-release:** bump polendina from 3.0.0 to 3.1.0 ([#43](https://github.com/rvagg/iamap/issues/43)) ([48f2814](https://github.com/rvagg/iamap/commit/48f2814dc51fcda74f7bdf5da0e75acb319ffbaa))
+* **no-release:** bump standard from 16.0.4 to 17.0.0 ([#40](https://github.com/rvagg/iamap/issues/40)) ([4645569](https://github.com/rvagg/iamap/commit/4645569eb7ea1572f42302142963911fbb3509ac))
+
 ### [2.0.11](https://github.com/rvagg/iamap/compare/v2.0.10...v2.0.11) (2022-03-02)
 
 
