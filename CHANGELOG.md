@@ -1,3 +1,13 @@
+## [2.0.14](https://github.com/rvagg/iamap/compare/v2.0.13...v2.0.14) (2022-12-09)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 4.8.4 to 4.9.4 ([#54](https://github.com/rvagg/iamap/issues/54)) ([d6361cc](https://github.com/rvagg/iamap/commit/d6361ccbb59e7f16f297c8a00dca46826a6d4724))
+* **no-release:** bump @types/mocha from 9.1.1 to 10.0.0 ([#51](https://github.com/rvagg/iamap/issues/51)) ([16546b2](https://github.com/rvagg/iamap/commit/16546b2bf110c280a055743011de6fcd2919e014))
+* **no-release:** bump actions/setup-node from 3.4.1 to 3.5.0 ([#50](https://github.com/rvagg/iamap/issues/50)) ([536c48e](https://github.com/rvagg/iamap/commit/536c48e9fe1cfd89792a6b8b4e2d01058eff35e8))
+* **no-release:** bump actions/setup-node from 3.5.0 to 3.5.1 ([#52](https://github.com/rvagg/iamap/issues/52)) ([089a482](https://github.com/rvagg/iamap/commit/089a482bdc3f3fe72a4e12c8d348a1876dc5882b))
+
 ## [2.0.13](https://github.com/rvagg/iamap/compare/v2.0.12...v2.0.13) (2022-08-27)
 
 
