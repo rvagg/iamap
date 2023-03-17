@@ -1,3 +1,15 @@
+## [2.0.16](https://github.com/rvagg/iamap/compare/v2.0.15...v2.0.16) (2023-03-17)
+
+
+### Bug Fixes
+
+* release with Node.js 18 ([5265dfc](https://github.com/rvagg/iamap/commit/5265dfce7ca7c5a4b9021f67c6d3286b01adbc74))
+
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 4.9.5 to 5.0.2 ([1df8cd8](https://github.com/rvagg/iamap/commit/1df8cd8b811d8c611cdae9488b4448214dac0a9d))
+
 ## [2.0.15](https://github.com/rvagg/iamap/compare/v2.0.14...v2.0.15) (2023-01-06)
 
 
