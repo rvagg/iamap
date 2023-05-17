@@ -1,3 +1,10 @@
+## [2.0.17](https://github.com/rvagg/iamap/compare/v2.0.16...v2.0.17) (2023-05-17)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump polendina from 3.1.0 to 3.2.1 ([aad4c5c](https://github.com/rvagg/iamap/commit/aad4c5c1879b8bc460e981eb5ac87afd371a0d7d))
+
 ## [2.0.16](https://github.com/rvagg/iamap/compare/v2.0.15...v2.0.16) (2023-03-17)
 
 
