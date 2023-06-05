@@ -1,4 +1,3 @@
-
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
 const { mask, setBit, bitmapHas, index } = require('./bit-utils')
