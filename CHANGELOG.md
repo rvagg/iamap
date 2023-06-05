@@ -1,3 +1,20 @@
+## [3.0.0](https://github.com/rvagg/iamap/compare/v2.0.17...v3.0.0) (2023-06-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* update Node.js versions, drop 14.x
+
+### Bug Fixes
+
+* remove blank line ([8628281](https://github.com/rvagg/iamap/commit/86282810b9a52110d01149ef060446ab4e31e47e))
+
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 5.0.4 to 5.1.3 ([5891171](https://github.com/rvagg/iamap/commit/5891171c4187618afd810488053dfe5fcbffa38a))
+* update Node.js versions, drop 14.x ([2cc1d2f](https://github.com/rvagg/iamap/commit/2cc1d2f84c86dce1e6bc7fc160812e0b433f1df7))
+
 ## [2.0.17](https://github.com/rvagg/iamap/compare/v2.0.16...v2.0.17) (2023-05-17)
 
 
