@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/rvagg/iamap/compare/v3.0.0...v3.0.1) (2023-06-14)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump c8 from 7.14.0 to 8.0.0 ([e2d2865](https://github.com/rvagg/iamap/commit/e2d28657c93acf77c24ee3bb19d63987fcad75d9))
+
 ## [3.0.0](https://github.com/rvagg/iamap/compare/v2.0.17...v3.0.0) (2023-06-05)
 
 
