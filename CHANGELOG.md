@@ -1,3 +1,10 @@
+## [3.0.3](https://github.com/rvagg/iamap/compare/v3.0.2...v3.0.3) (2023-08-14)
+
+
+### Trivial Changes
+
+* **deps:** bump actions/setup-node from 3.7.0 to 3.8.0 ([19861df](https://github.com/rvagg/iamap/commit/19861df2f03f7f1de8b706683aedbe760e548d13))
+
 ## [3.0.2](https://github.com/rvagg/iamap/compare/v3.0.1...v3.0.2) (2023-07-05)
 
 
