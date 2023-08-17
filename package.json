@@ -1,6 +1,6 @@
 {
   "name": "iamap",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "An **I**mmutable **A**synchronous **Map**.",
   "main": "iamap.js",
   "types": "./types/iamap.d.ts",
