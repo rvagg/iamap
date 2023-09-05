@@ -1,12 +1,12 @@
 // store using a link type `T`
 export interface Store<T> {
-  save(node: any): Promise<T>,
-  load(id: T): Promise<any>,
+  save(node: any, options?: AbortOptions): Promise<T>,
+  load(id: T, options?: AbortOptions): Promise<any>,
   isLink(link: T): boolean,
   isEqual(link1: T, link2: T): boolean,
 }
 
-export interface Options {
+export interface Options extends AbortOptions {
   bitWidth?: number,
   bucketSize?: number,
   hashAlg: number
@@ -16,6 +16,10 @@ export interface Config {
   bitWidth: number,
   bucketSize: number,
   hashAlg: number
+}
+
+export interface AbortOptions {
+  signal?: AbortSignal
 }
 
 export type SerializedKV = [Uint8Array, any]

@@ -46,17 +46,41 @@ function hash (obj) {
  * @returns {TestStore}
  */
 function memoryStore () {
+  let simulateBeingStuck = false
+
+  /**
+   * @param {AbortSignal} [signal]
+   */
+  async function beStuck (signal) {
+    if (signal == null) {
+      throw new Error('Expected signal option when simulating a memory store that is stuck.')
+    }
+    if (signal.aborted) {
+      throw new Error('Aborted')
+    }
+    // @ts-ignore: unused parameter "resolve". But can't rename to "_resolve", because of eslint rules
+    await new Promise((resolve, reject) => {
+      signal.onabort = () => reject(new Error('Aborted'))
+    })
+  }
+
   return {
     map: new Map(),
     saves: 0,
     loads: 0,
-    async save (obj) {
+    async save (obj, options) {
+      if (simulateBeingStuck) {
+        await beStuck(options == null ? undefined : options.signal)
+      }
       const id = hash(obj)
       this.map.set(id, obj)
       this.saves++
       return id
     },
-    load (id) { // this can be async
+    async load (id, options) {
+      if (simulateBeingStuck) {
+        await beStuck(options == null ? undefined : options.signal)
+      }
       this.loads++
       return this.map.get(id)
     },
@@ -65,6 +89,9 @@ function memoryStore () {
     },
     isLink (obj) {
       return typeof obj === 'number'
+    },
+    getStuck () {
+      simulateBeingStuck = true
     }
   }
 }

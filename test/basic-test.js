@@ -286,7 +286,7 @@ describe('Basics', () => {
       assert.strictEqual(child.data.length, 1)
       assert.strictEqual(child.data[0].bucket, null)
       assert.strictEqual(typeof child.data[0].link, 'number')
-      child = await iamap.load(store, child.data[0].link, i + 1, options)
+      child = await iamap.loadInternal(store, child.data[0].link, i + 1, options)
     }
     // at the 7th level they all have a different hash portion: 1,2,3 so they should be in separate buckets
     assert.strictEqual(child.data.length, 3)
@@ -331,7 +331,7 @@ describe('Basics', () => {
       assert.strictEqual(child.data.length, 1)
       assert.strictEqual(child.data[0].bucket, null)
       assert.strictEqual(typeof child.data[0].link, 'number')
-      child = await iamap.load(store, child.data[0].link, i + 1, options)
+      child = await iamap.loadInternal(store, child.data[0].link, i + 1, options)
     }
 
     assert.strictEqual(toHex(child.map), toHex(Uint8Array.from([0b101, 0]))) // data at position 2 and 0
@@ -376,7 +376,7 @@ describe('Basics', () => {
       assert.strictEqual(child.data.length, 1)
       assert.strictEqual(child.data[0].bucket, null)
       assert.strictEqual(typeof child.data[0].link, 'number')
-      child = await iamap.load(store, child.data[0].link, i + 1, options)
+      child = await iamap.loadInternal(store, child.data[0].link, i + 1, options)
     }
 
     // last level should have 2 buckets but with a bucket in 0 and a node in 2
@@ -432,7 +432,7 @@ describe('Basics', () => {
       assert.strictEqual(child.data.length, 1)
       assert.strictEqual(child.data[0].bucket, null)
       assert.strictEqual(typeof child.data[0].link, 'number')
-      child = await iamap.load(store, child.data[0].link, i + 1, options)
+      child = await iamap.loadInternal(store, child.data[0].link, i + 1, options)
     }
 
     // last level should have 2 buckets but with a bucket in 0 and a node in 2

@@ -16,6 +16,7 @@ const defaultBucketSize = 5 // array size for a bucket of values
  * @typedef {import('./interface').SerializedElement} SerializedElement
  * @typedef {import('./interface').SerializedNode} SerializedNode
  * @typedef {import('./interface').SerializedRoot} SerializedRoot
+ * @typedef {import('./interface').AbortOptions} AbortOptions
  * @typedef {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} Hasher
  * @typedef {{ hasher: Hasher, hashBytes: number }[]} Registry
  * @typedef {(link:any)=>boolean} IsLink
@@ -87,14 +88,28 @@ function assert (condition, message) {
  *     pushed
  *
  * @param {Options} options - Options for this IAMap
- * @param {Uint8Array} [map] - for internal use
- * @param {number} [depth] - for internal use
- * @param {Element[]} [data] - for internal use
  */
-async function create (store, options, map, depth, data) {
-  // map, depth and data are intended for internal use
-  const newNode = new IAMap(store, options, map, depth, data)
-  return save(store, newNode)
+async function create (store, options) {
+  const newNode = new IAMap(store, options)
+  return save(store, newNode, options)
+}
+
+/**
+ * Internally used for creating internal HAMT nodes.
+ *
+ * @async
+ * @function
+ * @template T
+ * @param {Store<T>} store
+ * @param {Config} config
+ * @param {Uint8Array} [map]
+ * @param {number} [depth]
+ * @param {Element[]} [data]
+ * @param {AbortOptions} [options]
+ */
+async function createInternal (store, config, map, depth, data, options) {
+  const newNode = new IAMap(store, config, map, depth, data)
+  return save(store, newNode, options)
 }
 
 /**
@@ -110,16 +125,29 @@ async function create (store, options, map, depth, data) {
  * @template T
  * @param {Store<T>} store - A backing store for this Map. See {@link iamap.create}.
  * @param {any} id - An content address / ID understood by the backing `store`.
- * @param {number} [depth=0]
- * @param {Options} [options]
+ * @param {AbortOptions} [options]
  */
-async function load (store, id, depth = 0, options) {
-  // depth and options are internal arguments that the user doesn't need to interact with
-  if (depth !== 0 && typeof options !== 'object') {
-    throw new Error('Cannot load() without options at depth > 0')
-  }
-  const serialized = await store.load(id)
-  return fromSerializable(store, id, serialized, options, depth)
+async function load (store, id, options) {
+  const serialized = await store.load(id, options)
+  // No need to pass a config/options at depth 0
+  return fromSerializable(store, id, serialized)
+}
+
+/**
+ * Internally used for loading internal HAMT nodes.
+ *
+ * @async
+ * @function
+ * @template T
+ * @param {Store<T>} store
+ * @param {any} id
+ * @param {number} depth
+ * @param {Config} config
+ * @param {AbortOptions} [options]
+ */
+async function loadInternal (store, id, depth, config, options) {
+  const serialized = await store.load(id, options)
+  return fromSerializable(store, id, serialized, config, depth)
 }
 
 /**
@@ -321,11 +349,12 @@ class IAMap {
    * `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
    * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
    * or an address or content address or other kind of link to the actual value.
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @param {Uint8Array} [_cachedHash] - for internal use
    * @returns {Promise<IAMap<T>>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
    * @async
    */
-  async set (key, value, _cachedHash) {
+  async set (key, value, options, _cachedHash) {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
@@ -346,7 +375,7 @@ class IAMap {
           // replace entry for this key with a new value
           // note that === will fail for two complex objects representing the same data so we may end up
           // with a node of the same ID anyway
-          return updateBucket(this, data.elementAt, data.bucketIndex, key, value)
+          return updateBucket(this, data.elementAt, data.bucketIndex, key, value, options)
         } else {
           /* c8 ignore next 3 */
           if (!data.element.bucket) {
@@ -354,22 +383,22 @@ class IAMap {
           }
           if (data.element.bucket.length >= this.config.bucketSize) {
             // too many collisions at this level, replace a bucket with a child node
-            return (await replaceBucketWithNode(this, data.elementAt)).set(key, value, hash)
+            return (await replaceBucketWithNode(this, data.elementAt, options)).set(key, value, options, hash)
           }
           // insert into the bucket and sort it
-          return updateBucket(this, data.elementAt, -1, key, value)
+          return updateBucket(this, data.elementAt, -1, key, value, options)
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, link.element.link, this.depth + 1, this.config, options)
         assert(!!child)
-        const newChild = await child.set(key, value, hash)
-        return updateNode(this, link.elementAt, newChild)
+        const newChild = await child.set(key, value, options, hash)
+        return updateNode(this, link.elementAt, newChild, options)
       /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
       }
     } else { // we don't have an element for this hash portion, make one
-      return addNewElement(this, bitpos, key, value)
+      return addNewElement(this, bitpos, key, value, options)
     }
   }
 
@@ -378,12 +407,13 @@ class IAMap {
    *
    * @param {string|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
    * details about acceptable `key` types.
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @param {Uint8Array} [_cachedHash] - for internal use
    * @returns {Promise<any>} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
    * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
    * @async
    */
-  async get (key, _cachedHash) {
+  async get (key, options, _cachedHash) {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
@@ -401,9 +431,9 @@ class IAMap {
         }
         return undefined // not found
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, link.element.link, this.depth + 1, this.config, options)
         assert(!!child)
-        return await child.get(key, hash)
+        return await child.get(key, options, hash)
         /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
@@ -445,12 +475,13 @@ class IAMap {
    *
    * @param {string|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
    * acceptable `key` types.
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @param {Uint8Array} [_cachedHash] - for internal use
    * @returns {Promise<IAMap<T>>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
    * instance if `key` does not exist within it.
    * @async
    */
-  async delete (key, _cachedHash) {
+  async delete (key, options, _cachedHash) {
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
@@ -470,7 +501,7 @@ class IAMap {
             // current node will only have this.config.bucketSize entries spread across its buckets
             // and no child nodes, so wrap up the remaining nodes in a fresh IAMap at depth 0, it will
             // bubble up to either become the new root node or be unpacked by a higher level
-            return collapseIntoSingleBucket(this, hash, data.elementAt, data.bucketIndex)
+            return collapseIntoSingleBucket(this, hash, data.elementAt, data.bucketIndex, options)
           } else {
             // we'll either have more entries left than this.config.bucketSize or we're at the root node
             // so this is a simple bucket removal, no collapsing needed (root nodes can't be collapsed)
@@ -481,16 +512,16 @@ class IAMap {
             if (lastInBucket) {
               newMap = setBit(newMap, bitpos, false)
             }
-            return create(this.store, this.config, newMap, this.depth, newData)
+            return createInternal(this.store, this.config, newMap, this.depth, newData, options)
           }
         } else {
           // key would be located here according to hash, but we don't have it
           return this
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, link.element.link, this.depth + 1, this.config, options)
         assert(!!child)
-        const newChild = await child.delete(key, hash)
+        const newChild = await child.delete(key, options, hash)
         if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
           return this
         }
@@ -506,11 +537,11 @@ class IAMap {
             return newChild
           } else {
             // extract data elements from this returned node and merge them into ours
-            return collapseNodeInline(this, bitpos, newChild)
+            return collapseNodeInline(this, bitpos, newChild, options)
           }
         } else {
           // simple node replacement with edited child
-          return updateNode(this, link.elementAt, newChild)
+          return updateNode(this, link.elementAt, newChild, options)
         }
         /* c8 ignore next 3 */
       } else {
@@ -524,16 +555,17 @@ class IAMap {
   /**
    * Asynchronously count the number of key/value pairs contained within this `IAMap`, including its children.
    *
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @returns {Promise<number>} A `Promise` with a `number` indicating the number of key/value pairs within this `IAMap` instance.
    * @async
    */
-  async size () {
+  async size (options) {
     let c = 0
     for (const e of this.data) {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         c += await child.size()
       }
     }
@@ -544,18 +576,19 @@ class IAMap {
    * Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
    * traversal of all nodes.
    *
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @returns {AsyncGenerator<Uint8Array>} An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
    * format they were inserted via `set()`.
    * @async
    */
-  async * keys () {
+  async * keys (options) {
     for (const e of this.data) {
       if (e.bucket) {
         for (const kv of e.bucket) {
           yield kv.key
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.keys()
       }
     }
@@ -567,17 +600,18 @@ class IAMap {
    * Asynchronously emit all values that exist within this `IAMap`, including its children. This will cause a full
    * traversal of all nodes.
    *
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @returns {AsyncGenerator<any>} An async iterator that yields values.
    * @async
    */
-  async * values () {
+  async * values (options) {
     for (const e of this.data) {
       if (e.bucket) {
         for (const kv of e.bucket) {
           yield kv.value
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.values()
       }
     }
@@ -589,17 +623,18 @@ class IAMap {
    * Asynchronously emit all { key, value } pairs that exist within this `IAMap`, including its children. This will
    * cause a full traversal of all nodes.
    *
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @returns {AsyncGenerator<{ key: Uint8Array, value: any}>} An async iterator that yields objects with the properties `key` and `value`.
    * @async
    */
-  async * entries () {
+  async * entries (options) {
     for (const e of this.data) {
       if (e.bucket) {
         for (const kv of e.bucket) {
           yield { key: kv.key, value: kv.value }
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.entries()
       }
     }
@@ -610,14 +645,15 @@ class IAMap {
   /**
    * Asynchronously emit the IDs of this `IAMap` and all of its children.
    *
+   * @param {AbortOptions} [options] - options for operations with the underlying store
    * @returns {AsyncGenerator<any>} An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
    * determined by the backing store which is responsible for generating IDs upon `save()` operations.
    */
-  async * ids () {
+  async * ids (options) {
     yield this.id
     for (const e of this.data) {
       if (e.link) {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
+        const child = await loadInternal(this.store, e.link, this.depth + 1, this.config, options)
         yield * child.ids()
       }
     }
@@ -761,10 +797,11 @@ class IAMap {
  * @template T
  * @param {Store<T>} store
  * @param {IAMap<T>} newNode
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-async function save (store, newNode) {
-  const id = await store.save(newNode.toSerializable())
+async function save (store, newNode, options) {
+  const id = await store.save(newNode.toSerializable(), options)
   newNode.id = id
   return newNode
 }
@@ -806,14 +843,15 @@ function findElement (node, bitpos, key) {
  * @param {number} bitpos
  * @param {Uint8Array} key
  * @param {any} value
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-async function addNewElement (node, bitpos, key, value) {
+async function addNewElement (node, bitpos, key, value, options) {
   const insertAt = index(node.map, bitpos)
   const newData = node.data.slice()
   newData.splice(insertAt, 0, new Element([new KV(key, value)]))
   const newMap = setBit(node.map, bitpos, true)
-  return create(node.store, node.config, newMap, node.depth, newData)
+  return createInternal(node.store, node.config, newMap, node.depth, newData, options)
 }
 
 /**
@@ -825,9 +863,10 @@ async function addNewElement (node, bitpos, key, value) {
  * @param {number} bucketAt
  * @param {Uint8Array} key
  * @param {any} value
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-async function updateBucket (node, elementAt, bucketAt, key, value) {
+async function updateBucket (node, elementAt, bucketAt, key, value, options) {
   const oldElement = node.data[elementAt]
   /* c8 ignore next 3 */
   if (!oldElement.bucket) {
@@ -848,7 +887,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   }
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 /**
@@ -857,9 +896,10 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
  * @template T
  * @param {IAMap<T>} node
  * @param {number} elementAt
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-async function replaceBucketWithNode (node, elementAt) {
+async function replaceBucketWithNode (node, elementAt, options) {
   let newNode = new IAMap(node.store, node.config, undefined, node.depth + 1)
   const element = node.data[elementAt]
   assert(!!element)
@@ -870,10 +910,10 @@ async function replaceBucketWithNode (node, elementAt) {
   for (const c of element.bucket) {
     newNode = await newNode.set(c.key, c.value)
   }
-  newNode = await save(node.store, newNode)
+  newNode = await save(node.store, newNode, options)
   const newData = node.data.slice()
   newData[elementAt] = new Element(undefined, newNode.id)
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 /**
@@ -883,14 +923,15 @@ async function replaceBucketWithNode (node, elementAt) {
  * @param {IAMap<T>} node
  * @param {number} elementAt
  * @param {IAMap<T>} newChild
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-async function updateNode (node, elementAt, newChild) {
+async function updateNode (node, elementAt, newChild, options) {
   assert(!!newChild.id)
   const newElement = new Element(undefined, newChild.id)
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 // take a node, extract all of its local entries and put them into a new node with a single
@@ -902,9 +943,10 @@ async function updateNode (node, elementAt, newChild) {
  * @param {Uint8Array} hash
  * @param {number} elementAt
  * @param {number} bucketIndex
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
+function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex, options) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
   const newMap = setBit(new Uint8Array(node.map.length), mask(hash, 0, node.config.bitWidth), true)
   /**
@@ -935,7 +977,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   }, /** @type {KV[]} */ [])
   newBucket.sort((a, b) => byteCompare(a.key, b.key))
   const newElement = new Element(newBucket)
-  return create(node.store, node.config, newMap, 0, [newElement])
+  return createInternal(node.store, node.config, newMap, 0, [newElement], options)
 }
 
 // simple delete from an existing bucket in this node
@@ -978,9 +1020,10 @@ function removeFromBucket (data, elementAt, lastInBucket, bucketIndex) {
  * @param {IAMap<T>} node
  * @param {number} bitpos
  * @param {IAMap<T>} newNode
+ * @param {AbortOptions} [options] - options for operations with the underlying store
  * @returns {Promise<IAMap<T>>}
  */
-async function collapseNodeInline (node, bitpos, newNode) {
+async function collapseNodeInline (node, bitpos, newNode, options) {
   // assume the newNode has a single bucket and it's sorted and ready to replace the place
   // it had in node's element array
   assert(newNode.data.length === 1)
@@ -994,7 +1037,7 @@ async function collapseNodeInline (node, bitpos, newNode) {
   const newData = node.data.slice()
   newData[elementIndex] = newElement
 
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return createInternal(node.store, node.config, node.map, node.depth, newData, options)
 }
 
 /**
@@ -1013,6 +1056,9 @@ function buildConfig (options) {
     throw new TypeError('Invalid `options` object')
   }
 
+  if (options.hashAlg == null) {
+    throw new TypeError('Need to provide `options.hashAlg`')
+  }
   if (!Number.isInteger(options.hashAlg)) {
     throw new TypeError('Invalid `hashAlg` option')
   }
@@ -1195,7 +1241,9 @@ function byteCompare (b1, b2) {
 }
 
 module.exports.create = create
+module.exports.createInternal = createInternal
 module.exports.load = load
+module.exports.loadInternal = loadInternal
 module.exports.registerHasher = registerHasher
 module.exports.fromSerializable = fromSerializable
 module.exports.isSerializable = isSerializable
