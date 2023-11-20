@@ -31,7 +31,7 @@
     "murmurhash3js-revisited": "^3.0.0",
     "polendina": "~3.2.1",
     "standard": "^17.0.0",
-    "typescript": "~5.2.2"
+    "typescript": "~5.3.2"
   },
   "repository": {
     "type": "git",
