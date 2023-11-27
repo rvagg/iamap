@@ -1,3 +1,10 @@
+## [3.0.7](https://github.com/rvagg/iamap/compare/v3.0.6...v3.0.7) (2023-11-27)
+
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 5.2.2 to 5.3.2 ([55383b2](https://github.com/rvagg/iamap/commit/55383b244df36a00f762e21a08a581707388b33c))
+
 ## [3.0.6](https://github.com/rvagg/iamap/compare/v3.0.5...v3.0.6) (2023-10-25)
 
 
