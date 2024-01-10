@@ -1,3 +1,19 @@
+## [4.0.0](https://github.com/rvagg/iamap/compare/v3.0.9...v4.0.0) (2024-01-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* convert to ESM, adapt to chai@5
+
+### Features
+
+* convert to ESM, adapt to chai@5 ([eb40014](https://github.com/rvagg/iamap/commit/eb40014ec87663d3d88ae26cb2b804302e4810e8))
+
+
+### Trivial Changes
+
+* **deps-dev:** bump chai from 4.3.10 to 5.0.0 ([fbb63d4](https://github.com/rvagg/iamap/commit/fbb63d4bf5485ef9cf519403a93e82a83a89622e))
+
 ## [3.0.9](https://github.com/rvagg/iamap/compare/v3.0.8...v3.0.9) (2024-01-04)
 
 
