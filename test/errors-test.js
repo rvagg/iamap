@@ -2,10 +2,10 @@
 
 /* eslint-env mocha */
 
-const chai = require('chai')
-const chaiAsPromised = require('chai-as-promised')
-const iamap = require('../iamap.js')
-const { identityHasher } = require('./common.js')
+import * as chai from 'chai'
+import chaiAsPromised from '@rvagg/chai-as-promised'
+import * as iamap from '../iamap.js'
+import { identityHasher } from './common.js'
 
 /**
  * @typedef {import('../interface').Store<number>} Store

@@ -1,6 +1,6 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
-const bitSequence = require('bit-sequence')
+import bitSequence from 'bit-sequence'
 
 /**
  * @param {Uint8Array} hash
@@ -8,7 +8,7 @@ const bitSequence = require('bit-sequence')
  * @param {number} nbits
  * @returns {number}
  */
-function mask (hash, depth, nbits) {
+export function mask (hash, depth, nbits) {
   return bitSequence(hash, depth * nbits, nbits)
 }
 
@@ -19,7 +19,7 @@ function mask (hash, depth, nbits) {
  * @param {boolean|0|1} set
  * @returns {Uint8Array}
  */
-function setBit (bitmap, position, set) {
+export function setBit (bitmap, position, set) {
   // if we assume that `bitmap` is already the opposite of `set`, we could skip this check
   const byte = Math.floor(position / 8)
   const offset = position % 8
@@ -46,7 +46,7 @@ function setBit (bitmap, position, set) {
  * @param {number} [offset]
  * @returns {boolean}
  */
-function bitmapHas (bitmap, position, byte, offset) {
+export function bitmapHas (bitmap, position, byte, offset) {
   if (typeof byte !== 'number' || typeof offset !== 'number') {
     /* c8 ignore next 3 */
     if (position === undefined) {
@@ -67,7 +67,7 @@ function bitmapHas (bitmap, position, byte, offset) {
  * @param {number} position
  * @returns {number}
  */
-function index (bitmap, position) {
+export function index (bitmap, position) {
   let t = 0
   for (let i = 0; i < position; i++) {
     if (bitmapHas(bitmap, i)) {
@@ -76,8 +76,3 @@ function index (bitmap, position) {
   }
   return t
 }
-
-module.exports.mask = mask
-module.exports.setBit = setBit
-module.exports.bitmapHas = bitmapHas
-module.exports.index = index

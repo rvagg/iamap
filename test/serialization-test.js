@@ -2,10 +2,10 @@
 
 /* eslint-env mocha */
 
-const chai = require('chai')
-const chaiAsPromised = require('chai-as-promised')
-const { murmurHasher, identityHasher, memoryStore, toHex } = require('./common.js')
-const iamap = require('../iamap.js')
+import * as chai from 'chai'
+import chaiAsPromised from '@rvagg/chai-as-promised'
+import { murmurHasher, identityHasher, memoryStore, toHex } from './common.js'
+import * as iamap from '../iamap.js'
 
 chai.use(chaiAsPromised)
 const { assert } = chai

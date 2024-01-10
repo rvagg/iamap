@@ -14,11 +14,11 @@ export interface Config {
     bucketSize: number;
     hashAlg: number;
 }
-export declare type SerializedKV = [Uint8Array, any];
-export declare type SerializedElement = SerializedKV | any;
-declare type NodeMap = Uint8Array;
-declare type NodeData = SerializedElement[];
-export declare type SerializedNode = [NodeMap, NodeData];
+export type SerializedKV = [Uint8Array, any];
+export type SerializedElement = SerializedKV | any;
+type NodeMap = Uint8Array;
+type NodeData = SerializedElement[];
+export type SerializedNode = [NodeMap, NodeData];
 export interface SerializedRoot {
     hashAlg: number;
     bucketSize: number;

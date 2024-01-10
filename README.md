@@ -32,6 +32,8 @@ An IAMap is, therefore, a layer that provides a helpful key/value store on top o
 The interface bears resemblance to a `Map` but with some crucial differences: asynchronous calls and immutability:
 
 ```js
+import * as iamap from 'iamap'
+
 // instantiate with a backing store and a hash function
 let map = await iamap.create(store, { hashAlg: 'murmur3-32' })
 // mutations create new copies
@@ -97,27 +99,41 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 
 ### Contents
 
- * [`async iamap.create(store, options[, map][, depth][, data])`](#iamap__create)
- * [`async iamap.load(store, id[, depth][, options])`](#iamap__load)
- * [`iamap.registerHasher(hashAlg, hashBytes, hasher)`](#iamap__registerHasher)
- * [`async IAMap#set(key, value[, _cachedHash])`](#IAMap_set)
- * [`async IAMap#get(key[, _cachedHash])`](#IAMap_get)
- * [`async IAMap#has(key)`](#IAMap_has)
- * [`async IAMap#delete(key[, _cachedHash])`](#IAMap_delete)
- * [`async IAMap#size()`](#IAMap_size)
- * [`async * IAMap#keys()`](#IAMap_keys)
- * [`async * IAMap#values()`](#IAMap_values)
- * [`async * IAMap#entries()`](#IAMap_entries)
- * [`async * IAMap#ids()`](#IAMap_ids)
- * [`IAMap#toSerializable()`](#IAMap_toSerializable)
- * [`IAMap#directEntryCount()`](#IAMap_directEntryCount)
- * [`IAMap#directNodeCount()`](#IAMap_directNodeCount)
- * [`async IAMap#isInvariant()`](#IAMap_isInvariant)
- * [`IAMap#fromChildSerializable(id, serializable[, depth])`](#IAMap_fromChildSerializable)
- * [`iamap.isRootSerializable(serializable)`](#iamap__isRootSerializable)
- * [`iamap.isSerializable(serializable)`](#iamap__isSerializable)
- * [`iamap.fromSerializable(store, id, serializable[, options][, depth])`](#iamap__fromSerializable)
- * [`IAMap.isIAMap(node)`](#IAMap__isIAMap)
+* [Warning](#warning)
+* [Contents](#contents)
+* [About](#about)
+  * [IPLD](#ipld)
+* [Immutability](#immutability)
+* [Consistency](#consistency)
+* [Algorithm](#algorithm)
+  * [Algorithm Summary](#algorithm-summary)
+* [Examples](#examples)
+  * [examples/memory-backed.js](#examplesmemory-backedjs)
+  * [examples/level-backed.js](#exampleslevel-backedjs)
+* [API](#api)
+  * [Contents](#contents-1)
+  * [`async iamap.create(store, options[, map][, depth][, data])`](#async-iamapcreatestore-options-map-depth-data)
+  * [`async iamap.load(store, id[, depth][, options])`](#async-iamaploadstore-id-depth-options)
+  * [`iamap.registerHasher(hashAlg, hashBytes, hasher)`](#iamapregisterhasherhashalg-hashbytes-hasher)
+  * [`async IAMap#set(key, value[, _cachedHash])`](#async-iamapsetkey-value-_cachedhash)
+  * [`async IAMap#get(key[, _cachedHash])`](#async-iamapgetkey-_cachedhash)
+  * [`async IAMap#has(key)`](#async-iamaphaskey)
+  * [`async IAMap#delete(key[, _cachedHash])`](#async-iamapdeletekey-_cachedhash)
+  * [`async IAMap#size()`](#async-iamapsize)
+  * [`async * IAMap#keys()`](#async--iamapkeys)
+  * [`async * IAMap#values()`](#async--iamapvalues)
+  * [`async * IAMap#entries()`](#async--iamapentries)
+  * [`async * IAMap#ids()`](#async--iamapids)
+  * [`IAMap#toSerializable()`](#iamaptoserializable)
+  * [`IAMap#directEntryCount()`](#iamapdirectentrycount)
+  * [`IAMap#directNodeCount()`](#iamapdirectnodecount)
+  * [`async IAMap#isInvariant()`](#async-iamapisinvariant)
+  * [`IAMap#fromChildSerializable(id, serializable[, depth])`](#iamapfromchildserializableid-serializable-depth)
+  * [`iamap.isRootSerializable(serializable)`](#iamapisrootserializableserializable)
+  * [`iamap.isSerializable(serializable)`](#iamapisserializableserializable)
+  * [`iamap.fromSerializable(store, id, serializable[, options][, depth])`](#iamapfromserializablestore-id-serializable-options-depth)
+  * [`IAMap.isIAMap(node)`](#iamapisiamapnode)
+* [License and Copyright](#license-and-copyright)
 
 <a name="iamap__create"></a>
 ### `async iamap.create(store, options[, map][, depth][, data])`

@@ -2,9 +2,9 @@
 
 /* eslint-env mocha */
 
-const { assert } = require('chai')
-const { toHex } = require('./common.js')
-const { mask, bitmapHas, index, setBit } = require('../bit-utils.js')
+import { assert } from 'chai'
+import { toHex } from './common.js'
+import { mask, bitmapHas, index, setBit } from '../bit-utils.js'
 
 describe('Bit utils', () => {
   it('mask', () => {

@@ -1,6 +1,6 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
-const { mask, setBit, bitmapHas, index } = require('./bit-utils')
+import { mask, setBit, bitmapHas, index } from './bit-utils.js'
 
 const defaultBitWidth = 8 // 2^8 = 256 buckets or children per node
 const defaultBucketSize = 5 // array size for a bucket of values
@@ -91,7 +91,7 @@ function assert (condition, message) {
  * @param {number} [depth] - for internal use
  * @param {Element[]} [data] - for internal use
  */
-async function create (store, options, map, depth, data) {
+export async function create (store, options, map, depth, data) {
   // map, depth and data are intended for internal use
   const newNode = new IAMap(store, options, map, depth, data)
   return save(store, newNode)
@@ -113,7 +113,7 @@ async function create (store, options, map, depth, data) {
  * @param {number} [depth=0]
  * @param {Options} [options]
  */
-async function load (store, id, depth = 0, options) {
+export async function load (store, id, depth = 0, options) {
   // depth and options are internal arguments that the user doesn't need to interact with
   if (depth !== 0 && typeof options !== 'object') {
     throw new Error('Cannot load() without options at depth > 0')
@@ -139,7 +139,7 @@ async function load (store, id, depth = 0, options) {
  * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
  * may or may not be asynchronous but will be called with an `await`.
  */
-function registerHasher (hashAlg, hashBytes, hasher) {
+export function registerHasher (hashAlg, hashBytes, hasher) {
   if (!Number.isInteger(hashAlg)) {
     throw new Error('Invalid `hashAlg`')
   }
@@ -255,7 +255,7 @@ Element.fromSerializable = function (isLink, obj) {
  * bucket of entries or an ID of a child node
  * See {@link iamap.create} for more details.
  */
-class IAMap {
+export class IAMap {
   /**
    * @ignore
    * @param {Store<T>} store
@@ -1059,7 +1059,7 @@ function buildConfig (options) {
  * @param {any} serializable An object that may be a serialisable form of an IAMap root node
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
  */
-function isRootSerializable (serializable) {
+export function isRootSerializable (serializable) {
   return typeof serializable === 'object' &&
     Number.isInteger(serializable.hashAlg) &&
     Number.isInteger(serializable.bucketSize) &&
@@ -1077,7 +1077,7 @@ function isRootSerializable (serializable) {
  * @param {any} serializable An object that may be a serialisable form of an IAMap node
  * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
-function isSerializable (serializable) {
+export function isSerializable (serializable) {
   if (Array.isArray(serializable)) {
     return serializable.length === 2 && serializable[0] instanceof Uint8Array && Array.isArray(serializable[1])
   }
@@ -1107,7 +1107,7 @@ function isSerializable (serializable) {
  * node.
  * @returns {IAMap<T>}
  */
-function fromSerializable (store, id, serializable, options, depth = 0) {
+export function fromSerializable (store, id, serializable, options, depth = 0) {
   /**
    * @ignore
    * @type {SerializedNode}
@@ -1193,11 +1193,3 @@ function byteCompare (b1, b2) {
   }
   return 0
 }
-
-module.exports.create = create
-module.exports.load = load
-module.exports.registerHasher = registerHasher
-module.exports.fromSerializable = fromSerializable
-module.exports.isSerializable = isSerializable
-module.exports.isRootSerializable = isRootSerializable
-module.exports.IAMap = IAMap
