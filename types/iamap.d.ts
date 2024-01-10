@@ -1,34 +1,4 @@
 /**
- * <T>
- */
-export type Store<T> = import('./interface').Store<T>;
-export type Config = import('./interface').Config;
-export type Options = import('./interface').Options;
-export type SerializedKV = import('./interface').SerializedKV;
-export type SerializedElement = import('./interface').SerializedElement;
-export type SerializedNode = import('./interface').SerializedNode;
-export type SerializedRoot = import('./interface').SerializedRoot;
-export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
-export type Registry = {
-    hasher: Hasher;
-    hashBytes: number;
-}[];
-export type IsLink = (link: any) => boolean;
-export type ReadonlyElement = readonly Element[];
-export type FoundElement = {
-    data?: {
-        found: boolean;
-        elementAt: number;
-        element: Element;
-        bucketIndex?: number;
-        bucketEntry?: KV;
-    };
-    link?: {
-        elementAt: number;
-        element: Element;
-    };
-};
-/**
  * ```js
  * let map = await iamap.create(store, options)
  * ```
@@ -114,6 +84,27 @@ export function load<T>(store: import("./interface").Store<T>, id: any, depth?: 
  */
 export function registerHasher(hashAlg: number, hashBytes: number, hasher: Hasher): void;
 /**
+ * Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
+ * an IAMap before trying to instantiate it.
+ *
+ * @name iamap.isRootSerializable
+ * @function
+ * @param {any} serializable An object that may be a serialisable form of an IAMap root node
+ * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
+ */
+export function isRootSerializable(serializable: any): boolean;
+/**
+ * Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
+ * an IAMap node before trying to instantiate it.
+ * This should pass for both root nodes as well as child nodes
+ *
+ * @name iamap.isSerializable
+ * @function
+ * @param {any} serializable An object that may be a serialisable form of an IAMap node
+ * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
+ */
+export function isSerializable(serializable: any): boolean;
+/**
  * Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
  * produced by {@link IAMap#toSerializable}.
  * Serialised forms of root nodes must satisfy both {@link iamap.isRootSerializable} and {@link iamap.isSerializable}. For
@@ -137,27 +128,6 @@ export function registerHasher(hashAlg: number, hashBytes: number, hasher: Hashe
  * @returns {IAMap<T>}
  */
 export function fromSerializable<T>(store: import("./interface").Store<T>, id: any, serializable: any, options?: import("./interface").Options | undefined, depth?: number | undefined): IAMap<T>;
-/**
- * Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
- * an IAMap node before trying to instantiate it.
- * This should pass for both root nodes as well as child nodes
- *
- * @name iamap.isSerializable
- * @function
- * @param {any} serializable An object that may be a serialisable form of an IAMap node
- * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
- */
-export function isSerializable(serializable: any): boolean;
-/**
- * Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
- * an IAMap before trying to instantiate it.
- *
- * @name iamap.isRootSerializable
- * @function
- * @param {any} serializable An object that may be a serialisable form of an IAMap root node
- * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
- */
-export function isRootSerializable(serializable: any): boolean;
 /**
  * Immutable Asynchronous Map
  *
@@ -285,7 +255,7 @@ export class IAMap<T> {
     entries(): AsyncGenerator<{
         key: Uint8Array;
         value: any;
-    }, any, any>;
+    }>;
     /**
      * Asynchronously emit the IDs of this `IAMap` and all of its children.
      *
@@ -380,14 +350,35 @@ export namespace IAMap {
     function isIAMap<T_1>(node: any): boolean;
 }
 /**
- * internal utility to fetch a map instance's hash function
- *
- * @ignore
- * @template T
- * @param {IAMap<T>} map
- * @returns {Hasher}
+ * <T>
  */
-declare function hasher<T>(map: IAMap<T>): Hasher;
+export type Store<T> = import('./interface').Store<T>;
+export type Config = import('./interface').Config;
+export type Options = import('./interface').Options;
+export type SerializedKV = import('./interface').SerializedKV;
+export type SerializedElement = import('./interface').SerializedElement;
+export type SerializedNode = import('./interface').SerializedNode;
+export type SerializedRoot = import('./interface').SerializedRoot;
+export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
+export type Registry = {
+    hasher: Hasher;
+    hashBytes: number;
+}[];
+export type IsLink = (link: any) => boolean;
+export type ReadonlyElement = readonly Element[];
+export type FoundElement = {
+    data?: {
+        found: boolean;
+        elementAt: number;
+        element: Element;
+        bucketIndex?: number;
+        bucketEntry?: KV;
+    };
+    link?: {
+        elementAt: number;
+        element: Element;
+    };
+};
 declare class Element {
     /**
      * @ignore
@@ -412,6 +403,15 @@ declare namespace Element {
      */
     function fromSerializable(isLink: IsLink, obj: any): Element;
 }
+/**
+ * internal utility to fetch a map instance's hash function
+ *
+ * @ignore
+ * @template T
+ * @param {IAMap<T>} map
+ * @returns {Hasher}
+ */
+declare function hasher<T>(map: IAMap<T>): Hasher;
 /**
  * @ignore
  */

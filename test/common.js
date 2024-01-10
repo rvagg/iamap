@@ -1,8 +1,8 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
 // @ts-ignore
-const murmurhash3 = require('murmurhash3js-revisited')
-const { assert } = require('chai')
+import murmurhash3 from 'murmurhash3js-revisited'
+import { assert } from 'chai'
 
 /**
  * @typedef {import('./interface').TestStore} TestStore
@@ -12,7 +12,7 @@ const { assert } = require('chai')
  * @param {Uint8Array} key
  * @returns {Uint8Array}
  */
-function murmurHasher (key) {
+export function murmurHasher (key) {
   assert(key instanceof Uint8Array)
   const b = new Uint8Array(4)
   const view = new DataView(b.buffer)
@@ -25,7 +25,7 @@ function murmurHasher (key) {
  * @param {Uint8Array} key
  * @returns {Uint8Array}
  */
-function identityHasher (key) {
+export function identityHasher (key) {
   assert(key instanceof Uint8Array)
   return key
 }
@@ -45,7 +45,7 @@ function hash (obj) {
 /**
  * @returns {TestStore}
  */
-function memoryStore () {
+export function memoryStore () {
   return {
     map: new Map(),
     saves: 0,
@@ -91,7 +91,7 @@ function toBytes (obj) {
  * @param {Uint8Array} d
  * @returns {string}
  */
-function toHex (d) {
+export function toHex (d) {
   if (typeof d === 'string') {
     return d
   }
@@ -103,7 +103,7 @@ function toHex (d) {
  * @param {string|Uint8Array} hex
  * @returns {Uint8Array}
  */
-function fromHex (hex) {
+export function fromHex (hex) {
   if (hex instanceof Uint8Array) {
     return hex
   }
@@ -117,9 +117,3 @@ function fromHex (hex) {
     // @ts-ignore
     .map((e) => parseInt(e, 16)))
 }
-
-module.exports.identityHasher = identityHasher
-module.exports.murmurHasher = murmurHasher
-module.exports.memoryStore = memoryStore
-module.exports.toHex = toHex
-module.exports.fromHex = fromHex

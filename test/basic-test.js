@@ -2,9 +2,9 @@
 
 /* eslint-env mocha */
 
-const { assert } = require('chai')
-const { murmurHasher, identityHasher, memoryStore, fromHex, toHex } = require('./common.js')
-const iamap = require('../iamap.js')
+import { assert } from 'chai'
+import { murmurHasher, identityHasher, memoryStore, fromHex, toHex } from './common.js'
+import * as iamap from '../iamap.js'
 
 iamap.registerHasher(0x23 /* 'murmur3-32' */, 32, murmurHasher)
 iamap.registerHasher(0x00 /* 'identity' */, 32, identityHasher) // not recommended

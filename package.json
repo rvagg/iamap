@@ -2,6 +2,7 @@
   "name": "iamap",
   "version": "3.0.8",
   "description": "An **I**mmutable **A**synchronous **Map**.",
+  "type": "module",
   "main": "iamap.js",
   "types": "./types/iamap.d.ts",
   "scripts": {
@@ -20,18 +21,17 @@
     "bit-sequence": "^1.1.0"
   },
   "devDependencies": {
-    "@types/chai": "^4.3.0",
-    "@types/chai-as-promised": "^7.1.4",
-    "@types/mocha": "^10.0.0",
+    "@rvagg/chai-as-promised": "^8.0.0",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
     "c8": "^9.0.0",
     "chai": "^5.0.0",
-    "chai-as-promised": "^7.1.1",
     "jsdoc4readme": "^1.4.0",
-    "mocha": "^10.0.0",
+    "mocha": "^10.2.0",
     "murmurhash3js-revisited": "^3.0.0",
-    "polendina": "~3.2.1",
-    "standard": "^17.0.0",
-    "typescript": "~5.3.2"
+    "polendina": "^3.2.1",
+    "standard": "^17.1.0",
+    "typescript": "^5.3.3"
   },
   "repository": {
     "type": "git",
