@@ -519,4 +519,130 @@ describe('Basics', () => {
     }
     assert.strictEqual(idCount, 7) // 7 nodes deep
   })
+
+  describe('AbortSignal', () => {
+    it('pre-aborted signal throws on set, get, has, delete', async () => {
+      const store = memoryStore()
+      const map = await iamap.create(store, { hashAlg: 0x23 })
+      const controller = new AbortController()
+      controller.abort()
+      const signal = controller.signal
+
+      const assertAborted = (/** @type {any} */ err) => {
+        assert.strictEqual(err.name, 'AbortError')
+      }
+
+      await map.set('a', 1, { signal }).then(() => assert.fail('expected throw'), assertAborted)
+      await map.get('a', { signal }).then(() => assert.fail('expected throw'), assertAborted)
+      await map.has('a', { signal }).then(() => assert.fail('expected throw'), assertAborted)
+      await map.delete('a', { signal }).then(() => assert.fail('expected throw'), assertAborted)
+    })
+
+    it('pre-aborted signal throws on size, keys, values, entries, ids', async () => {
+      const store = memoryStore()
+      const map = await iamap.create(store, { hashAlg: 0x23 })
+      const populated = await map.set('a', 1)
+      const controller = new AbortController()
+      controller.abort()
+      const signal = controller.signal
+
+      const assertAborted = (/** @type {any} */ err) => {
+        assert.strictEqual(err.name, 'AbortError')
+      }
+
+      await populated.size({ signal }).then(() => assert.fail('expected throw'), assertAborted)
+
+      // iterators: the signal is checked inside the for loop
+      const consume = async (/** @type {AsyncIterable<any>} */ iter) => {
+        // eslint-disable-next-line no-unused-vars
+        for await (const _ of iter) { /* noop */ }
+      }
+      await consume(populated.keys({ signal })).then(() => assert.fail('expected throw'), assertAborted)
+      await consume(populated.values({ signal })).then(() => assert.fail('expected throw'), assertAborted)
+      await consume(populated.entries({ signal })).then(() => assert.fail('expected throw'), assertAborted)
+      await consume(populated.ids({ signal })).then(() => assert.fail('expected throw'), assertAborted)
+    })
+
+    it('signal is passed through to store operations', async () => {
+      const calls = /** @type {{ method: string, signal?: AbortSignal }[]} */ ([])
+      const inner = memoryStore()
+      const store = {
+        async save (node, /** @type {import('../interface').StoreOperationOptions} */ options) {
+          calls.push({ method: 'save', signal: options && options.signal })
+          return inner.save(node)
+        },
+        async load (id, /** @type {import('../interface').StoreOperationOptions} */ options) {
+          calls.push({ method: 'load', signal: options && options.signal })
+          return inner.load(id)
+        },
+        isEqual: inner.isEqual,
+        isLink: inner.isLink
+      }
+
+      const controller = new AbortController()
+      const signal = controller.signal
+
+      const map = await iamap.create(store, { hashAlg: 0x23 }, undefined, undefined, undefined, signal)
+      const map2 = await map.set('foo', 'bar', { signal })
+
+      // verify signal was forwarded to store.save()
+      const saveCalls = calls.filter(c => c.method === 'save')
+      assert.ok(saveCalls.length >= 2)
+      for (const c of saveCalls) {
+        assert.strictEqual(c.signal, signal)
+      }
+
+      // trigger a load by reading back from a child
+      await map2.get('foo', { signal })
+      // no loads needed for single-level map, but size() on a deeper tree will
+
+      // build a deeper tree to trigger load() calls with signal
+      calls.length = 0
+      const options = { hashAlg: 0x00, bitWidth: 4, bucketSize: 2 }
+      iamap.registerHasher(0x00, 32, identityHasher)
+      const k = (2 << 4) | 2
+      let deep = await iamap.create(store, options, undefined, undefined, undefined, signal)
+      deep = await deep.set(Uint8Array.from([k, k, k, 1 << 4]), 'v1', { signal })
+      deep = await deep.set(Uint8Array.from([k, k, k, 2 << 4]), 'v2', { signal })
+      deep = await deep.set(Uint8Array.from([k, k, k, 3 << 4]), 'v3', { signal })
+
+      calls.length = 0
+      await deep.get(Uint8Array.from([k, k, k, 1 << 4]), { signal })
+      const loadCalls = calls.filter(c => c.method === 'load')
+      assert.ok(loadCalls.length >= 1)
+      for (const c of loadCalls) {
+        assert.strictEqual(c.signal, signal)
+      }
+    })
+
+    it('custom abort reason is preserved', async () => {
+      const store = memoryStore()
+      const map = await iamap.create(store, { hashAlg: 0x23 })
+      const reason = new Error('custom reason')
+      const controller = new AbortController()
+      controller.abort(reason)
+
+      try {
+        await map.get('a', { signal: controller.signal })
+        assert.fail('expected throw')
+      } catch (/** @type {any} */ err) {
+        assert.strictEqual(err, reason)
+      }
+    })
+
+    it('fallback AbortError when signal.reason is falsy', async () => {
+      const store = memoryStore()
+      const map = await iamap.create(store, { hashAlg: 0x23 })
+      // Mock signal with aborted=true but no reason (pre-Node.js 17 style)
+      const signal = /** @type {AbortSignal} */ ({ aborted: true, reason: undefined })
+
+      try {
+        await map.get('a', { signal })
+        assert.fail('expected throw')
+      } catch (/** @type {any} */ err) {
+        assert.strictEqual(err.name, 'AbortError')
+        assert.ok(err instanceof DOMException)
+      }
+    })
+  })
 })

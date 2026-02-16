@@ -16,6 +16,11 @@ const defaultBucketSize = 5 // array size for a bucket of values
  * @typedef {import('./interface').SerializedElement} SerializedElement
  * @typedef {import('./interface').SerializedNode} SerializedNode
  * @typedef {import('./interface').SerializedRoot} SerializedRoot
+ * @typedef {import('./interface').StoreOperationOptions} StoreOperationOptions
+ * @typedef {{ signal?: AbortSignal, _cachedHash?: Uint8Array }} SetOptions
+ * @typedef {{ signal?: AbortSignal, _cachedHash?: Uint8Array }} GetOptions
+ * @typedef {{ signal?: AbortSignal, _cachedHash?: Uint8Array }} DeleteOptions
+ * @typedef {{ signal?: AbortSignal }} SignalOptions
  * @typedef {(inp:Uint8Array)=>(Uint8Array|Promise<Uint8Array>)} Hasher
  * @typedef {{ hasher: Hasher, hashBytes: number }[]} Registry
  * @typedef {(link:any)=>boolean} IsLink
@@ -39,6 +44,16 @@ const textEncoder = new TextEncoder()
 function assert (condition, message) {
   if (!condition) {
     throw new Error(message || 'Unexpected error')
+  }
+}
+
+/**
+ * @ignore
+ * @param {AbortSignal} [signal]
+ */
+function checkSignal (signal) {
+  if (signal && signal.aborted) {
+    throw signal.reason || new DOMException('The operation was aborted', 'AbortError')
   }
 }
 
@@ -90,11 +105,12 @@ function assert (condition, message) {
  * @param {Uint8Array} [map] - for internal use
  * @param {number} [depth] - for internal use
  * @param {Element[]} [data] - for internal use
+ * @param {AbortSignal} [signal] - An optional AbortSignal that can be used to cancel the operation
  */
-export async function create (store, options, map, depth, data) {
+export async function create (store, options, map, depth, data, signal) {
   // map, depth and data are intended for internal use
   const newNode = new IAMap(store, options, map, depth, data)
-  return save(store, newNode)
+  return save(store, newNode, signal)
 }
 
 /**
@@ -112,13 +128,15 @@ export async function create (store, options, map, depth, data) {
  * @param {any} id - An content address / ID understood by the backing `store`.
  * @param {number} [depth=0]
  * @param {Options} [options]
+ * @param {AbortSignal} [signal] - An optional AbortSignal that can be used to cancel the operation
  */
-export async function load (store, id, depth = 0, options) {
-  // depth and options are internal arguments that the user doesn't need to interact with
+export async function load (store, id, depth = 0, options, signal) {
+  // depth, options and signal are internal arguments that the user doesn't need to interact with
   if (depth !== 0 && typeof options !== 'object') {
     throw new Error('Cannot load() without options at depth > 0')
   }
-  const serialized = await store.load(id)
+  checkSignal(signal)
+  const serialized = await store.load(id, signal ? { signal } : undefined)
   return fromSerializable(store, id, serialized, options, depth)
 }
 
@@ -321,11 +339,15 @@ export class IAMap {
    * `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
    * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
    * or an address or content address or other kind of link to the actual value.
-   * @param {Uint8Array} [_cachedHash] - for internal use
+   * @param {SetOptions} [options] - Optional parameters. `signal` can be
+   * used to abort the operation. `_cachedHash` is for internal use.
    * @returns {Promise<IAMap<T>>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
    * @async
    */
-  async set (key, value, _cachedHash) {
+  async set (key, value, options) {
+    const signal = options && options.signal
+    const _cachedHash = options && options._cachedHash
+    checkSignal(signal)
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
@@ -346,7 +368,7 @@ export class IAMap {
           // replace entry for this key with a new value
           // note that === will fail for two complex objects representing the same data so we may end up
           // with a node of the same ID anyway
-          return updateBucket(this, data.elementAt, data.bucketIndex, key, value)
+          return updateBucket(this, data.elementAt, data.bucketIndex, key, value, signal)
         } else {
           /* c8 ignore next 3 */
           if (!data.element.bucket) {
@@ -354,22 +376,22 @@ export class IAMap {
           }
           if (data.element.bucket.length >= this.config.bucketSize) {
             // too many collisions at this level, replace a bucket with a child node
-            return (await replaceBucketWithNode(this, data.elementAt)).set(key, value, hash)
+            return (await replaceBucketWithNode(this, data.elementAt, signal)).set(key, value, { signal, _cachedHash: hash })
           }
           // insert into the bucket and sort it
-          return updateBucket(this, data.elementAt, -1, key, value)
+          return updateBucket(this, data.elementAt, -1, key, value, signal)
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await load(this.store, link.element.link, this.depth + 1, this.config, signal)
         assert(!!child)
-        const newChild = await child.set(key, value, hash)
-        return updateNode(this, link.elementAt, newChild)
+        const newChild = await child.set(key, value, { signal, _cachedHash: hash })
+        return updateNode(this, link.elementAt, newChild, signal)
       /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
       }
     } else { // we don't have an element for this hash portion, make one
-      return addNewElement(this, bitpos, key, value)
+      return addNewElement(this, bitpos, key, value, signal)
     }
   }
 
@@ -378,12 +400,16 @@ export class IAMap {
    *
    * @param {string|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
    * details about acceptable `key` types.
-   * @param {Uint8Array} [_cachedHash] - for internal use
+   * @param {GetOptions} [options] - Optional parameters. `signal` can be
+   * used to abort the operation. `_cachedHash` is for internal use.
    * @returns {Promise<any>} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
    * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
    * @async
    */
-  async get (key, _cachedHash) {
+  async get (key, options) {
+    const signal = options && options.signal
+    const _cachedHash = options && options._cachedHash
+    checkSignal(signal)
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
@@ -401,9 +427,9 @@ export class IAMap {
         }
         return undefined // not found
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await load(this.store, link.element.link, this.depth + 1, this.config, signal)
         assert(!!child)
-        return await child.get(key, hash)
+        return await child.get(key, { signal, _cachedHash: hash })
         /* c8 ignore next 3 */
       } else {
         throw new Error('Unexpected error')
@@ -411,19 +437,6 @@ export class IAMap {
     } else { // we don't have an element for this hash portion, not found
       return undefined
     }
-
-    /*
-    const traversal = traverseGet(this, key, this.store.isEqual, this.store.isLink, this.depth)
-    while (true) {
-      const nextId = traversal.traverse()
-      if (!nextId) {
-        return traversal.value()
-      }
-      const child = await this.store.load(nextId)
-      assert(!!child)
-      traversal.next(child)
-    }
-    */
   }
 
   /**
@@ -431,12 +444,13 @@ export class IAMap {
    *
    * @param {string|Uint8Array} key - A key to check for existence within this `IAMap`. See
    * {@link IAMap#set} for details about acceptable `key` types.
+   * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
    * @returns {Promise<boolean>} A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
    * within this `IAMap`.
    * @async
    */
-  async has (key) {
-    return (await this.get(key)) !== undefined
+  async has (key, options) {
+    return (await this.get(key, options)) !== undefined
   }
 
   /**
@@ -445,12 +459,16 @@ export class IAMap {
    *
    * @param {string|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
    * acceptable `key` types.
-   * @param {Uint8Array} [_cachedHash] - for internal use
+   * @param {DeleteOptions} [options] - Optional parameters. `signal` can be
+   * used to abort the operation. `_cachedHash` is for internal use.
    * @returns {Promise<IAMap<T>>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
    * instance if `key` does not exist within it.
    * @async
    */
-  async delete (key, _cachedHash) {
+  async delete (key, options) {
+    const signal = options && options.signal
+    const _cachedHash = options && options._cachedHash
+    checkSignal(signal)
     if (!(key instanceof Uint8Array)) {
       key = textEncoder.encode(key)
     }
@@ -470,7 +488,7 @@ export class IAMap {
             // current node will only have this.config.bucketSize entries spread across its buckets
             // and no child nodes, so wrap up the remaining nodes in a fresh IAMap at depth 0, it will
             // bubble up to either become the new root node or be unpacked by a higher level
-            return collapseIntoSingleBucket(this, hash, data.elementAt, data.bucketIndex)
+            return collapseIntoSingleBucket(this, hash, data.elementAt, data.bucketIndex, signal)
           } else {
             // we'll either have more entries left than this.config.bucketSize or we're at the root node
             // so this is a simple bucket removal, no collapsing needed (root nodes can't be collapsed)
@@ -481,16 +499,16 @@ export class IAMap {
             if (lastInBucket) {
               newMap = setBit(newMap, bitpos, false)
             }
-            return create(this.store, this.config, newMap, this.depth, newData)
+            return create(this.store, this.config, newMap, this.depth, newData, signal)
           }
         } else {
           // key would be located here according to hash, but we don't have it
           return this
         }
       } else if (link) {
-        const child = await load(this.store, link.element.link, this.depth + 1, this.config)
+        const child = await load(this.store, link.element.link, this.depth + 1, this.config, signal)
         assert(!!child)
-        const newChild = await child.delete(key, hash)
+        const newChild = await child.delete(key, { signal, _cachedHash: hash })
         if (this.store.isEqual(newChild.id, link.element.link)) { // no modification
           return this
         }
@@ -506,11 +524,11 @@ export class IAMap {
             return newChild
           } else {
             // extract data elements from this returned node and merge them into ours
-            return collapseNodeInline(this, bitpos, newChild)
+            return collapseNodeInline(this, bitpos, newChild, signal)
           }
         } else {
           // simple node replacement with edited child
-          return updateNode(this, link.elementAt, newChild)
+          return updateNode(this, link.elementAt, newChild, signal)
         }
         /* c8 ignore next 3 */
       } else {
@@ -524,17 +542,20 @@ export class IAMap {
   /**
    * Asynchronously count the number of key/value pairs contained within this `IAMap`, including its children.
    *
+   * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
    * @returns {Promise<number>} A `Promise` with a `number` indicating the number of key/value pairs within this `IAMap` instance.
    * @async
    */
-  async size () {
+  async size (options) {
+    const signal = options && options.signal
+    checkSignal(signal)
     let c = 0
     for (const e of this.data) {
       if (e.bucket) {
         c += e.bucket.length
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
-        c += await child.size()
+        const child = await load(this.store, e.link, this.depth + 1, this.config, signal)
+        c += await child.size(options)
       }
     }
     return c
@@ -544,81 +565,87 @@ export class IAMap {
    * Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
    * traversal of all nodes.
    *
+   * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
    * @returns {AsyncGenerator<Uint8Array>} An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
    * format they were inserted via `set()`.
    * @async
    */
-  async * keys () {
+  async * keys (options) {
+    const signal = options && options.signal
     for (const e of this.data) {
+      checkSignal(signal)
       if (e.bucket) {
         for (const kv of e.bucket) {
           yield kv.key
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.keys()
+        const child = await load(this.store, e.link, this.depth + 1, this.config, signal)
+        yield * child.keys(options)
       }
     }
-
-    // yield * traverseKV(this, 'keys', this.store.isLink)
   }
 
   /**
    * Asynchronously emit all values that exist within this `IAMap`, including its children. This will cause a full
    * traversal of all nodes.
    *
+   * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
    * @returns {AsyncGenerator<any>} An async iterator that yields values.
    * @async
    */
-  async * values () {
+  async * values (options) {
+    const signal = options && options.signal
     for (const e of this.data) {
+      checkSignal(signal)
       if (e.bucket) {
         for (const kv of e.bucket) {
           yield kv.value
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.values()
+        const child = await load(this.store, e.link, this.depth + 1, this.config, signal)
+        yield * child.values(options)
       }
     }
-
-    // yield * traverseKV(this, 'values', this.store.isLink)
   }
 
   /**
    * Asynchronously emit all { key, value } pairs that exist within this `IAMap`, including its children. This will
    * cause a full traversal of all nodes.
    *
+   * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
    * @returns {AsyncGenerator<{ key: Uint8Array, value: any}>} An async iterator that yields objects with the properties `key` and `value`.
    * @async
    */
-  async * entries () {
+  async * entries (options) {
+    const signal = options && options.signal
     for (const e of this.data) {
+      checkSignal(signal)
       if (e.bucket) {
         for (const kv of e.bucket) {
           yield { key: kv.key, value: kv.value }
         }
       } else {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.entries()
+        const child = await load(this.store, e.link, this.depth + 1, this.config, signal)
+        yield * child.entries(options)
       }
     }
-
-    // yield * traverseKV(this, 'entries', this.store.isLink)
   }
 
   /**
    * Asynchronously emit the IDs of this `IAMap` and all of its children.
    *
+   * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
    * @returns {AsyncGenerator<any>} An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
    * determined by the backing store which is responsible for generating IDs upon `save()` operations.
    */
-  async * ids () {
+  async * ids (options) {
+    const signal = options && options.signal
     yield this.id
     for (const e of this.data) {
+      checkSignal(signal)
       if (e.link) {
-        const child = await load(this.store, e.link, this.depth + 1, this.config)
-        yield * child.ids()
+        const child = await load(this.store, e.link, this.depth + 1, this.config, signal)
+        yield * child.ids(options)
       }
     }
   }
@@ -761,10 +788,12 @@ export class IAMap {
  * @template T
  * @param {Store<T>} store
  * @param {IAMap<T>} newNode
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-async function save (store, newNode) {
-  const id = await store.save(newNode.toSerializable())
+async function save (store, newNode, signal) {
+  checkSignal(signal)
+  const id = await store.save(newNode.toSerializable(), signal ? { signal } : undefined)
   newNode.id = id
   return newNode
 }
@@ -806,14 +835,15 @@ function findElement (node, bitpos, key) {
  * @param {number} bitpos
  * @param {Uint8Array} key
  * @param {any} value
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-async function addNewElement (node, bitpos, key, value) {
+async function addNewElement (node, bitpos, key, value, signal) {
   const insertAt = index(node.map, bitpos)
   const newData = node.data.slice()
   newData.splice(insertAt, 0, new Element([new KV(key, value)]))
   const newMap = setBit(node.map, bitpos, true)
-  return create(node.store, node.config, newMap, node.depth, newData)
+  return create(node.store, node.config, newMap, node.depth, newData, signal)
 }
 
 /**
@@ -825,9 +855,10 @@ async function addNewElement (node, bitpos, key, value) {
  * @param {number} bucketAt
  * @param {Uint8Array} key
  * @param {any} value
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-async function updateBucket (node, elementAt, bucketAt, key, value) {
+async function updateBucket (node, elementAt, bucketAt, key, value, signal) {
   const oldElement = node.data[elementAt]
   /* c8 ignore next 3 */
   if (!oldElement.bucket) {
@@ -848,7 +879,7 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
   }
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData, signal)
 }
 
 /**
@@ -857,9 +888,10 @@ async function updateBucket (node, elementAt, bucketAt, key, value) {
  * @template T
  * @param {IAMap<T>} node
  * @param {number} elementAt
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-async function replaceBucketWithNode (node, elementAt) {
+async function replaceBucketWithNode (node, elementAt, signal) {
   let newNode = new IAMap(node.store, node.config, undefined, node.depth + 1)
   const element = node.data[elementAt]
   assert(!!element)
@@ -868,12 +900,12 @@ async function replaceBucketWithNode (node, elementAt) {
     throw new Error('Unexpected error')
   }
   for (const c of element.bucket) {
-    newNode = await newNode.set(c.key, c.value)
+    newNode = await newNode.set(c.key, c.value, { signal })
   }
-  newNode = await save(node.store, newNode)
+  newNode = await save(node.store, newNode, signal)
   const newData = node.data.slice()
   newData[elementAt] = new Element(undefined, newNode.id)
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData, signal)
 }
 
 /**
@@ -883,14 +915,15 @@ async function replaceBucketWithNode (node, elementAt) {
  * @param {IAMap<T>} node
  * @param {number} elementAt
  * @param {IAMap<T>} newChild
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-async function updateNode (node, elementAt, newChild) {
+async function updateNode (node, elementAt, newChild, signal) {
   assert(!!newChild.id)
   const newElement = new Element(undefined, newChild.id)
   const newData = node.data.slice()
   newData[elementAt] = newElement
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData, signal)
 }
 
 // take a node, extract all of its local entries and put them into a new node with a single
@@ -902,9 +935,10 @@ async function updateNode (node, elementAt, newChild) {
  * @param {Uint8Array} hash
  * @param {number} elementAt
  * @param {number} bucketIndex
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
+function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex, signal) {
   // pretend it's depth=0 (it may end up being) and only 1 bucket
   const newMap = setBit(new Uint8Array(node.map.length), mask(hash, 0, node.config.bitWidth), true)
   /**
@@ -935,7 +969,7 @@ function collapseIntoSingleBucket (node, hash, elementAt, bucketIndex) {
   }, /** @type {KV[]} */ [])
   newBucket.sort((a, b) => byteCompare(a.key, b.key))
   const newElement = new Element(newBucket)
-  return create(node.store, node.config, newMap, 0, [newElement])
+  return create(node.store, node.config, newMap, 0, [newElement], signal)
 }
 
 // simple delete from an existing bucket in this node
@@ -978,9 +1012,10 @@ function removeFromBucket (data, elementAt, lastInBucket, bucketIndex) {
  * @param {IAMap<T>} node
  * @param {number} bitpos
  * @param {IAMap<T>} newNode
+ * @param {AbortSignal} [signal]
  * @returns {Promise<IAMap<T>>}
  */
-async function collapseNodeInline (node, bitpos, newNode) {
+async function collapseNodeInline (node, bitpos, newNode, signal) {
   // assume the newNode has a single bucket and it's sorted and ready to replace the place
   // it had in node's element array
   assert(newNode.data.length === 1)
@@ -994,7 +1029,7 @@ async function collapseNodeInline (node, bitpos, newNode) {
   const newData = node.data.slice()
   newData[elementIndex] = newElement
 
-  return create(node.store, node.config, node.map, node.depth, newData)
+  return create(node.store, node.config, node.map, node.depth, newData, signal)
 }
 
 /**

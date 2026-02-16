@@ -1,6 +1,9 @@
+export interface StoreOperationOptions {
+    signal?: AbortSignal;
+}
 export interface Store<T> {
-    save(node: any): Promise<T>;
-    load(id: T): Promise<any>;
+    save(node: any, options?: StoreOperationOptions): Promise<T>;
+    load(id: T, options?: StoreOperationOptions): Promise<any>;
     isLink(link: T): boolean;
     isEqual(link1: T, link2: T): boolean;
 }

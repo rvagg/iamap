@@ -124,18 +124,18 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 
 ### Contents
 
- * [`async iamap.create(store, options[, map][, depth][, data])`](#iamap__create)
- * [`async iamap.load(store, id[, depth][, options])`](#iamap__load)
+ * [`async iamap.create(store, options[, map][, depth][, data][, signal])`](#iamap__create)
+ * [`async iamap.load(store, id[, depth][, options][, signal])`](#iamap__load)
  * [`iamap.registerHasher(hashAlg, hashBytes, hasher)`](#iamap__registerHasher)
- * [`async IAMap#set(key, value[, _cachedHash])`](#IAMap_set)
- * [`async IAMap#get(key[, _cachedHash])`](#IAMap_get)
- * [`async IAMap#has(key)`](#IAMap_has)
- * [`async IAMap#delete(key[, _cachedHash])`](#IAMap_delete)
- * [`async IAMap#size()`](#IAMap_size)
- * [`async * IAMap#keys()`](#IAMap_keys)
- * [`async * IAMap#values()`](#IAMap_values)
- * [`async * IAMap#entries()`](#IAMap_entries)
- * [`async * IAMap#ids()`](#IAMap_ids)
+ * [`async IAMap#set(key, value[, options])`](#IAMap_set)
+ * [`async IAMap#get(key[, options])`](#IAMap_get)
+ * [`async IAMap#has(key[, options])`](#IAMap_has)
+ * [`async IAMap#delete(key[, options])`](#IAMap_delete)
+ * [`async IAMap#size([options])`](#IAMap_size)
+ * [`async * IAMap#keys([options])`](#IAMap_keys)
+ * [`async * IAMap#values([options])`](#IAMap_values)
+ * [`async * IAMap#entries([options])`](#IAMap_entries)
+ * [`async * IAMap#ids([options])`](#IAMap_ids)
  * [`IAMap#toSerializable()`](#IAMap_toSerializable)
  * [`IAMap#directEntryCount()`](#IAMap_directEntryCount)
  * [`IAMap#directNodeCount()`](#IAMap_directNodeCount)
@@ -147,7 +147,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
  * [`IAMap.isIAMap(node)`](#IAMap__isIAMap)
 
 <a name="iamap__create"></a>
-### `async iamap.create(store, options[, map][, depth][, data])`
+### `async iamap.create(store, options[, map][, depth][, data][, signal])`
 
 * `store` `(Store<T>)`: A backing store for this Map. The store should be able to save and load a serialised
   form of a single node of a IAMap which is provided as a plain object representation. `store.save(node)` takes
@@ -184,6 +184,7 @@ _(Note: directories with many 10's of thousands of .js files will be slow to ind
 * `map` `(Uint8Array, optional)`: for internal use
 * `depth` `(number, optional)`: for internal use
 * `data` `(Element[], optional)`: for internal use
+* `signal` `(AbortSignal, optional)`: An optional AbortSignal that can be used to cancel the operation
 
 ```js
 let map = await iamap.create(store, options)
@@ -193,12 +194,13 @@ Create a new IAMap instance with a backing store. This operation is asynchronous
 resolves to a `IAMap` instance.
 
 <a name="iamap__load"></a>
-### `async iamap.load(store, id[, depth][, options])`
+### `async iamap.load(store, id[, depth][, options][, signal])`
 
 * `store` `(Store<T>)`: A backing store for this Map. See [`iamap.create`](#iamap__create).
 * `id` `(any)`: An content address / ID understood by the backing `store`.
 * `depth` `(number, optional, default=`0`)`
 * `options` `(Options, optional)`
+* `signal` `(AbortSignal, optional)`: An optional AbortSignal that can be used to cancel the operation
 
 ```js
 let map = await iamap.load(store, id)
@@ -224,25 +226,27 @@ Register a new hash function. IAMap has no hash functions by default, at least o
 IAMap.
 
 <a name="IAMap_set"></a>
-### `async IAMap#set(key, value[, _cachedHash])`
+### `async IAMap#set(key, value[, options])`
 
 * `key` `(string|Uint8Array)`: A key for the `value` being set whereby that same `value` may
   be retrieved with a `get()` operation with the same `key`. The type of the `key` object should either be a
   `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
 * `value` `(any)`: Any value that can be stored in the backing store. A value could be a serialisable object
   or an address or content address or other kind of link to the actual value.
-* `_cachedHash` `(Uint8Array, optional)`: for internal use
+* `options` `(SetOptions, optional)`: Optional parameters. `signal` can be
+  used to abort the operation. `_cachedHash` is for internal use.
 
 * Returns:  `Promise<IAMap<T>>`: A `Promise` containing a new `IAMap` that contains the new key/value pair.
 
 Asynchronously create a new `IAMap` instance identical to this one but with `key` set to `value`.
 
 <a name="IAMap_get"></a>
-### `async IAMap#get(key[, _cachedHash])`
+### `async IAMap#get(key[, options])`
 
 * `key` `(string|Uint8Array)`: A key for the value being sought. See [`IAMap#set`](#IAMap_set) for
   details about acceptable `key` types.
-* `_cachedHash` `(Uint8Array, optional)`: for internal use
+* `options` `(GetOptions, optional)`: Optional parameters. `signal` can be
+  used to abort the operation. `_cachedHash` is for internal use.
 
 * Returns:  `Promise<any>`: A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
   key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
@@ -250,10 +254,11 @@ Asynchronously create a new `IAMap` instance identical to this one but with `key
 Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
 
 <a name="IAMap_has"></a>
-### `async IAMap#has(key)`
+### `async IAMap#has(key[, options])`
 
 * `key` `(string|Uint8Array)`: A key to check for existence within this `IAMap`. See
   [`IAMap#set`](#IAMap_set) for details about acceptable `key` types.
+* `options` `(SignalOptions, optional)`: Optional parameters. `signal` can be used to abort the operation.
 
 * Returns:  `Promise<boolean>`: A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
   within this `IAMap`.
@@ -261,11 +266,12 @@ Asynchronously find and return a value for the given `key` if it exists within t
 Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
 
 <a name="IAMap_delete"></a>
-### `async IAMap#delete(key[, _cachedHash])`
+### `async IAMap#delete(key[, options])`
 
 * `key` `(string|Uint8Array)`: A key to remove. See [`IAMap#set`](#IAMap_set) for details about
   acceptable `key` types.
-* `_cachedHash` `(Uint8Array, optional)`: for internal use
+* `options` `(DeleteOptions, optional)`: Optional parameters. `signal` can be
+  used to abort the operation. `_cachedHash` is for internal use.
 
 * Returns:  `Promise<IAMap<T>>`: A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
   instance if `key` does not exist within it.
@@ -274,14 +280,18 @@ Asynchronously create a new `IAMap` instance identical to this one but with `key
 value removed. If the `key` does not exist within this `IAMap`, this instance of `IAMap` is returned.
 
 <a name="IAMap_size"></a>
-### `async IAMap#size()`
+### `async IAMap#size([options])`
+
+* `options` `(SignalOptions, optional)`: Optional parameters. `signal` can be used to abort the operation.
 
 * Returns:  `Promise<number>`: A `Promise` with a `number` indicating the number of key/value pairs within this `IAMap` instance.
 
 Asynchronously count the number of key/value pairs contained within this `IAMap`, including its children.
 
 <a name="IAMap_keys"></a>
-### `async * IAMap#keys()`
+### `async * IAMap#keys([options])`
+
+* `options` `(SignalOptions, optional)`: Optional parameters. `signal` can be used to abort the operation.
 
 * Returns:  `AsyncGenerator<Uint8Array>`: An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
   format they were inserted via `set()`.
@@ -290,7 +300,9 @@ Asynchronously emit all keys that exist within this `IAMap`, including its child
 traversal of all nodes.
 
 <a name="IAMap_values"></a>
-### `async * IAMap#values()`
+### `async * IAMap#values([options])`
+
+* `options` `(SignalOptions, optional)`: Optional parameters. `signal` can be used to abort the operation.
 
 * Returns:  `AsyncGenerator<any>`: An async iterator that yields values.
 
@@ -298,7 +310,9 @@ Asynchronously emit all values that exist within this `IAMap`, including its chi
 traversal of all nodes.
 
 <a name="IAMap_entries"></a>
-### `async * IAMap#entries()`
+### `async * IAMap#entries([options])`
+
+* `options` `(SignalOptions, optional)`: Optional parameters. `signal` can be used to abort the operation.
 
 * Returns:  `AsyncGenerator<{key: Uint8Array, value: any}>`: An async iterator that yields objects with the properties `key` and `value`.
 
@@ -306,7 +320,9 @@ Asynchronously emit all { key, value } pairs that exist within this `IAMap`, inc
 cause a full traversal of all nodes.
 
 <a name="IAMap_ids"></a>
-### `async * IAMap#ids()`
+### `async * IAMap#ids([options])`
+
+* `options` `(SignalOptions, optional)`: Optional parameters. `signal` can be used to abort the operation.
 
 * Returns:  `AsyncGenerator<any>`: An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
   determined by the backing store which is responsible for generating IDs upon `save()` operations.
