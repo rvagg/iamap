@@ -47,7 +47,7 @@
  * @param {number} [depth] - for internal use
  * @param {Element[]} [data] - for internal use
  */
-export function create<T>(store: import("./interface").Store<T>, options: Options, map?: Uint8Array | undefined, depth?: number | undefined, data?: Element[] | undefined): Promise<IAMap<T>>;
+export function create<T>(store: Store<T>, options: Options, map?: Uint8Array, depth?: number, data?: Element[]): Promise<IAMap<T>>;
 /**
  * ```js
  * let map = await iamap.load(store, id)
@@ -64,7 +64,7 @@ export function create<T>(store: import("./interface").Store<T>, options: Option
  * @param {number} [depth=0]
  * @param {Options} [options]
  */
-export function load<T>(store: import("./interface").Store<T>, id: any, depth?: number | undefined, options?: import("./interface").Options | undefined): Promise<IAMap<T>>;
+export function load<T>(store: Store<T>, id: any, depth?: number, options?: Options): Promise<IAMap<T>>;
 /**
  * ```js
  * iamap.registerHasher(hashAlg, hashBytes, hasher)
@@ -127,7 +127,7 @@ export function isSerializable(serializable: any): boolean;
  * node.
  * @returns {IAMap<T>}
  */
-export function fromSerializable<T>(store: import("./interface").Store<T>, id: any, serializable: any, options?: import("./interface").Options | undefined, depth?: number | undefined): IAMap<T>;
+export function fromSerializable<T>(store: Store<T>, id: any, serializable: any, options?: Options, depth?: number): IAMap<T>;
 /**
  * Immutable Asynchronous Map
  *
@@ -160,7 +160,7 @@ export class IAMap<T> {
      * @param {number} [depth]
      * @param {Element[]} [data]
      */
-    constructor(store: Store<T>, options?: import("./interface").Options | undefined, map?: Uint8Array | undefined, depth?: number | undefined, data?: Element[] | undefined);
+    constructor(store: Store<T>, options?: Options, map?: Uint8Array, depth?: number, data?: Element[]);
     store: import("./interface").Store<T>;
     /**
      * @ignore
@@ -168,7 +168,7 @@ export class IAMap<T> {
      */
     id: any | null;
     config: import("./interface").Config;
-    map: Uint8Array;
+    map: Uint8Array<ArrayBufferLike>;
     depth: number;
     /**
      * @ignore
@@ -187,7 +187,7 @@ export class IAMap<T> {
      * @returns {Promise<IAMap<T>>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
      * @async
      */
-    set(key: (string | Uint8Array), value: any, _cachedHash?: Uint8Array | undefined): Promise<IAMap<T>>;
+    set(key: (string | Uint8Array), value: any, _cachedHash?: Uint8Array): Promise<IAMap<T>>;
     /**
      * Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
      *
@@ -198,7 +198,7 @@ export class IAMap<T> {
      * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
      * @async
      */
-    get(key: string | Uint8Array, _cachedHash?: Uint8Array | undefined): Promise<any>;
+    get(key: string | Uint8Array, _cachedHash?: Uint8Array): Promise<any>;
     /**
      * Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
      *
@@ -220,7 +220,7 @@ export class IAMap<T> {
      * instance if `key` does not exist within it.
      * @async
      */
-    delete(key: string | Uint8Array, _cachedHash?: Uint8Array | undefined): Promise<IAMap<T>>;
+    delete(key: string | Uint8Array, _cachedHash?: Uint8Array): Promise<IAMap<T>>;
     /**
      * Asynchronously count the number of key/value pairs contained within this `IAMap`, including its children.
      *
@@ -306,7 +306,7 @@ export class IAMap<T> {
      * @returns {SerializedNode|SerializedRoot} An object representing the internal state of this local `IAMap` node, including its links to child nodes
      * if any.
      */
-    toSerializable(): import("./interface").SerializedNode | SerializedRoot;
+    toSerializable(): SerializedNode | SerializedRoot;
     /**
      * Calculate the number of entries locally stored by this node. Performs a scan of local buckets and adds up
      * their size.
@@ -339,7 +339,7 @@ export class IAMap<T> {
      * @param {any} serializable The serializable form of an IAMap node to be instantiated.
      * @param {number} [depth=0] The depth of the IAMap node. See {@link iamap.fromSerializable}.
     */
-    fromChildSerializable(id: any, serializable: any, depth?: number | undefined): IAMap<T>;
+    fromChildSerializable(id: any, serializable: any, depth?: number): IAMap<T>;
 }
 export namespace IAMap {
     /**
@@ -347,18 +347,18 @@ export namespace IAMap {
      * @param {IAMap<T> | any} node
      * @returns {boolean}
      */
-    function isIAMap<T_1>(node: any): boolean;
+    function isIAMap<T_1>(node: IAMap<T_1> | any): boolean;
 }
 /**
  * <T>
  */
-export type Store<T> = import('./interface').Store<T>;
-export type Config = import('./interface').Config;
-export type Options = import('./interface').Options;
-export type SerializedKV = import('./interface').SerializedKV;
-export type SerializedElement = import('./interface').SerializedElement;
-export type SerializedNode = import('./interface').SerializedNode;
-export type SerializedRoot = import('./interface').SerializedRoot;
+export type Store<T> = import("./interface").Store<T>;
+export type Config = import("./interface").Config;
+export type Options = import("./interface").Options;
+export type SerializedKV = import("./interface").SerializedKV;
+export type SerializedElement = import("./interface").SerializedElement;
+export type SerializedNode = import("./interface").SerializedNode;
+export type SerializedRoot = import("./interface").SerializedRoot;
 export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
 export type Registry = {
     hasher: Hasher;
@@ -385,7 +385,7 @@ declare class Element {
      * @param {KV[]} [bucket]
      * @param {any} [link]
      */
-    constructor(bucket?: KV[] | undefined, link?: any);
+    constructor(bucket?: KV[], link?: any);
     bucket: KV[] | null;
     link: any;
     /**
@@ -404,15 +404,6 @@ declare namespace Element {
     function fromSerializable(isLink: IsLink, obj: any): Element;
 }
 /**
- * internal utility to fetch a map instance's hash function
- *
- * @ignore
- * @template T
- * @param {IAMap<T>} map
- * @returns {Hasher}
- */
-declare function hasher<T>(map: IAMap<T>): Hasher;
-/**
  * @ignore
  */
 declare class KV {
@@ -422,13 +413,13 @@ declare class KV {
      * @param {any} value
      */
     constructor(key: Uint8Array, value: any);
-    key: Uint8Array;
+    key: Uint8Array<ArrayBufferLike>;
     value: any;
     /**
      * @ignore
      * @returns {SerializedKV}
      */
-    toSerializable(): import("./interface").SerializedKV;
+    toSerializable(): SerializedKV;
 }
 declare namespace KV {
     /**
@@ -436,7 +427,7 @@ declare namespace KV {
      * @param {SerializedKV} obj
      * @returns {KV}
      */
-    function fromSerializable(obj: import("./interface").SerializedKV): KV;
+    function fromSerializable(obj: SerializedKV): KV;
 }
 export {};
 //# sourceMappingURL=iamap.d.ts.map

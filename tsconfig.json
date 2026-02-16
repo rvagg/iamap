@@ -31,7 +31,8 @@
   "exclude": [
     "./node_modules",
     "./types/*",
-    "./examples"
+    "./examples",
+    "./test"
   ],
   "compileOnSave": false
 }
