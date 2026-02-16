@@ -1,3 +1,9 @@
+## [5.1.0](https://github.com/rvagg/iamap/compare/v5.0.0...v5.1.0) (2026-02-16)
+
+### Features
+
+* add AbortSignal support to async operations ([#76](https://github.com/rvagg/iamap/issues/76)) ([a198e5d](https://github.com/rvagg/iamap/commit/a198e5d6ba552b7eb7877e4d0839b4f13139f384))
+
 ## [5.0.0](https://github.com/rvagg/iamap/compare/v4.0.0...v5.0.0) (2026-02-16)
 
 ### ⚠ BREAKING CHANGES
