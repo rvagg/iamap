@@ -25,5 +25,5 @@ export function toHex(d: Uint8Array): string;
  * @returns {Uint8Array}
  */
 export function fromHex(hex: string | Uint8Array): Uint8Array;
-export type TestStore = import('./interface').TestStore;
+export type TestStore = import("./interface").TestStore;
 //# sourceMappingURL=common.d.ts.map

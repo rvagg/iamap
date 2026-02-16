@@ -21,7 +21,7 @@ export function setBit(bitmap: Uint8Array, position: number, set: boolean | 0 | 
  * @param {number} [offset]
  * @returns {boolean}
  */
-export function bitmapHas(bitmap: Uint8Array, position?: number | undefined, byte?: number | undefined, offset?: number | undefined): boolean;
+export function bitmapHas(bitmap: Uint8Array, position?: number, byte?: number, offset?: number): boolean;
 /**
  * count how many `1` bits are in `bitmap up until `position`
  * tells us where in the compacted element array an element should live

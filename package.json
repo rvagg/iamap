@@ -5,6 +5,15 @@
   "type": "module",
   "main": "iamap.js",
   "types": "./types/iamap.d.ts",
+  "exports": {
+    ".": {
+      "import": "./iamap.js",
+      "types": "./types/iamap.d.ts"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "lint": "standard *.js test/*.js",
     "build": "npm run docs && npm run build:types",
@@ -18,20 +27,28 @@
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
   "license": "Apache-2.0",
   "dependencies": {
-    "bit-sequence": "^1.1.0"
+    "bit-sequence": "^1.2.0"
   },
   "devDependencies": {
-    "@rvagg/chai-as-promised": "^8.0.0",
-    "@types/chai": "^4.3.11",
-    "@types/mocha": "^10.0.6",
-    "c8": "^9.0.0",
-    "chai": "^5.0.0",
+    "@rvagg/chai-as-promised": "^8.0.2",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.4",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "c8": "^10.1.3",
+    "chai": "^6.2.2",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
     "jsdoc4readme": "^1.4.0",
-    "mocha": "^10.2.0",
+    "mocha": "^11.7.5",
     "murmurhash3js-revisited": "^3.0.0",
-    "polendina": "^3.2.1",
-    "standard": "^17.1.0",
-    "typescript": "^5.3.3"
+    "polendina": "^3.2.19",
+    "semantic-release": "^25.0.3",
+    "standard": "^17.1.2",
+    "typescript": "^5.9.3"
   },
   "repository": {
     "type": "git",

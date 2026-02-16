@@ -1,9 +1,12 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
-const fs = require('fs').promises
-const path = require('path')
-const murmurhash3 = require('murmurhash3js-revisited')
-const iamap = require('../')
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import murmurhash3 from 'murmurhash3js-revisited'
+import * as iamap from '../iamap.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /*
 

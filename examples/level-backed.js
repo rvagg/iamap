@@ -3,21 +3,20 @@
 // Copyright Rod Vagg; Licensed under the Apache License, Version 2.0, see README.md for more information
 
 // Needs additional dependencies: npm i level split2 multiformats @ipld/dag-cbor
-// Run with `node --no-warnings` to suppress any experimental warnings
 
 /*
 
-This example uses IAMap to crate an index of all module names `require()`d by .js files in a given
+This example uses IAMap to crate an index of all module names `import`ed by .js files in a given
 directory (and any of its subdirectories). You can then use that index to find a list of files that
 use a particular module.
 
 Usage:
   level-backed.js --index <dir>
-    - build an index of require()'d modules inside .js files contained in 'dir' (recursively searched)
+    - build an index of imported modules inside .js files contained in 'dir' (recursively searched)
     - returns a map ID that you can use for --search and --stats
 
   level-backed.js --search <indexId> <module>
-    - search an index, identified by 'indexId', for all files that require() a 'module'
+    - search an index, identified by 'indexId', for all files that import a 'module'
 
   level-backed.js --stats <indexId>
     - print some basic stats of the index identified by 'indexId'
@@ -41,18 +40,18 @@ storing IAMap's within an IAMap and using the root as a Map and the values are S
 
 */
 
-const assert = require('assert')
-const fs = require('fs')
-const path = require('path')
-const { Transform } = require('stream')
-const murmurhash3 = require('murmurhash3js-revisited')
-const level = require('level')
-const { CID } = require('multiformats/cid')
-const Block = require('multiformats/block')
-const { sha256 } = require('multiformats/hashes/sha2')
-const dagCbor = require('@ipld/dag-cbor')
-const split2 = require('split2')
-const iamap = require('../')
+import assert from 'node:assert'
+import fs from 'node:fs'
+import path from 'node:path'
+import { Transform } from 'node:stream'
+import murmurhash3 from 'murmurhash3js-revisited'
+import level from 'level'
+import { CID } from 'multiformats/cid'
+import * as Block from 'multiformats/block'
+import { sha256 } from 'multiformats/hashes/sha2'
+import * as dagCbor from '@ipld/dag-cbor'
+import split2 from 'split2'
+import * as iamap from '../iamap.js'
 
 const dbLocation = '/tmp/iamap-level-example.db'
 const store = {
@@ -123,11 +122,11 @@ async function * findJs (dir) {
   }
 }
 
-// Given a directory, find all of the .js files in it and match every instance of require() and extract
+// Given a directory, find all of the .js files in it and match every instance of import and extract
 // the module being used. We're ignoring modules starting with '.' and also anything after '/' if used.
-// Emit [ file, module ] pairs for every valid require() found.
-async function * findRequires (dir) {
-  const requireRe = /require\(['"]([^.][^'"/]*)/g
+// Emit [ file, module ] pairs for every valid import found.
+async function * findImports (dir) {
+  const importRe = /import .* from ['"]([^.][^'"]*)['"]/g
 
   for await (let file of findJs(dir)) {
     file = path.resolve(process.cwd(), file) // absolute
@@ -137,7 +136,7 @@ async function * findRequires (dir) {
         objectMode: true,
         transform (line, enc, callback) {
           let match
-          while ((match = requireRe.exec(line)) != null) {
+          while ((match = importRe.exec(line)) != null) {
             this.push([file, match[1]])
           }
           callback()
@@ -167,12 +166,12 @@ async function buildIndex (dir) {
   let map = await createMap()
 
   let c = 0
-  for await (const req of findRequires(dir)) {
+  for await (const req of findImports(dir)) {
     if (++c % 1000 === 0) {
       process.stdout.write('.')
     }
 
-    const [file, mod] = req // findRequires() emits pairs in an array
+    const [file, mod] = req // findImports() emits pairs in an array
     const listId = await map.get(mod)
     let list
     if (!listId) { // new module, make a new Set out of a new IAMap
@@ -247,11 +246,11 @@ function printUsage () {
   console.error(`Usage:
 
   level-backed.js --index <dir>
-    - build an index of require()'d modules inside .js files contained in 'dir' (recursively searched)
+    - build an index of imported modules inside .js files contained in 'dir' (recursively searched)
     - returns a map ID that you can use for --search and --stats
 
   level-backed.js --search <indexId> <module>
-    - search an index, identified by 'indexId', for all files that require() a 'module'
+    - search an index, identified by 'indexId', for all files that import a 'module'
 
   level-backed.js --stats <indexId>
     - print some basic stats of the index identified by 'indexId'`)
