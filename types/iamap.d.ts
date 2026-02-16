@@ -46,8 +46,9 @@
  * @param {Uint8Array} [map] - for internal use
  * @param {number} [depth] - for internal use
  * @param {Element[]} [data] - for internal use
+ * @param {AbortSignal} [signal] - An optional AbortSignal that can be used to cancel the operation
  */
-export function create<T>(store: Store<T>, options: Options, map?: Uint8Array, depth?: number, data?: Element[]): Promise<IAMap<T>>;
+export function create<T>(store: Store<T>, options: Options, map?: Uint8Array, depth?: number, data?: Element[], signal?: AbortSignal): Promise<IAMap<T>>;
 /**
  * ```js
  * let map = await iamap.load(store, id)
@@ -63,8 +64,9 @@ export function create<T>(store: Store<T>, options: Options, map?: Uint8Array, d
  * @param {any} id - An content address / ID understood by the backing `store`.
  * @param {number} [depth=0]
  * @param {Options} [options]
+ * @param {AbortSignal} [signal] - An optional AbortSignal that can be used to cancel the operation
  */
-export function load<T>(store: Store<T>, id: any, depth?: number, options?: Options): Promise<IAMap<T>>;
+export function load<T>(store: Store<T>, id: any, depth?: number, options?: Options, signal?: AbortSignal): Promise<IAMap<T>>;
 /**
  * ```js
  * iamap.registerHasher(hashAlg, hashBytes, hasher)
@@ -183,86 +185,95 @@ export class IAMap<T> {
      * `Uint8Array` or be convertable to a `Uint8Array` via `TextEncoder.
      * @param {any} value - Any value that can be stored in the backing store. A value could be a serialisable object
      * or an address or content address or other kind of link to the actual value.
-     * @param {Uint8Array} [_cachedHash] - for internal use
+     * @param {SetOptions} [options] - Optional parameters. `signal` can be
+     * used to abort the operation. `_cachedHash` is for internal use.
      * @returns {Promise<IAMap<T>>} A `Promise` containing a new `IAMap` that contains the new key/value pair.
      * @async
      */
-    set(key: (string | Uint8Array), value: any, _cachedHash?: Uint8Array): Promise<IAMap<T>>;
+    set(key: (string | Uint8Array), value: any, options?: SetOptions): Promise<IAMap<T>>;
     /**
      * Asynchronously find and return a value for the given `key` if it exists within this `IAMap`.
      *
      * @param {string|Uint8Array} key - A key for the value being sought. See {@link IAMap#set} for
      * details about acceptable `key` types.
-     * @param {Uint8Array} [_cachedHash] - for internal use
+     * @param {GetOptions} [options] - Optional parameters. `signal` can be
+     * used to abort the operation. `_cachedHash` is for internal use.
      * @returns {Promise<any>} A `Promise` that resolves to the value being sought if that value exists within this `IAMap`. If the
      * key is not found in this `IAMap`, the `Promise` will resolve to `undefined`.
      * @async
      */
-    get(key: string | Uint8Array, _cachedHash?: Uint8Array): Promise<any>;
+    get(key: string | Uint8Array, options?: GetOptions): Promise<any>;
     /**
      * Asynchronously find and return a boolean indicating whether the given `key` exists within this `IAMap`
      *
      * @param {string|Uint8Array} key - A key to check for existence within this `IAMap`. See
      * {@link IAMap#set} for details about acceptable `key` types.
+     * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
      * @returns {Promise<boolean>} A `Promise` that resolves to either `true` or `false` depending on whether the `key` exists
      * within this `IAMap`.
      * @async
      */
-    has(key: string | Uint8Array): Promise<boolean>;
+    has(key: string | Uint8Array, options?: SignalOptions): Promise<boolean>;
     /**
      * Asynchronously create a new `IAMap` instance identical to this one but with `key` and its associated
      * value removed. If the `key` does not exist within this `IAMap`, this instance of `IAMap` is returned.
      *
      * @param {string|Uint8Array} key - A key to remove. See {@link IAMap#set} for details about
      * acceptable `key` types.
-     * @param {Uint8Array} [_cachedHash] - for internal use
+     * @param {DeleteOptions} [options] - Optional parameters. `signal` can be
+     * used to abort the operation. `_cachedHash` is for internal use.
      * @returns {Promise<IAMap<T>>} A `Promise` that resolves to a new `IAMap` instance without the given `key` or the same `IAMap`
      * instance if `key` does not exist within it.
      * @async
      */
-    delete(key: string | Uint8Array, _cachedHash?: Uint8Array): Promise<IAMap<T>>;
+    delete(key: string | Uint8Array, options?: DeleteOptions): Promise<IAMap<T>>;
     /**
      * Asynchronously count the number of key/value pairs contained within this `IAMap`, including its children.
      *
+     * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
      * @returns {Promise<number>} A `Promise` with a `number` indicating the number of key/value pairs within this `IAMap` instance.
      * @async
      */
-    size(): Promise<number>;
+    size(options?: SignalOptions): Promise<number>;
     /**
      * Asynchronously emit all keys that exist within this `IAMap`, including its children. This will cause a full
      * traversal of all nodes.
      *
+     * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
      * @returns {AsyncGenerator<Uint8Array>} An async iterator that yields keys. All keys will be in `Uint8Array` format regardless of which
      * format they were inserted via `set()`.
      * @async
      */
-    keys(): AsyncGenerator<Uint8Array>;
+    keys(options?: SignalOptions): AsyncGenerator<Uint8Array>;
     /**
      * Asynchronously emit all values that exist within this `IAMap`, including its children. This will cause a full
      * traversal of all nodes.
      *
+     * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
      * @returns {AsyncGenerator<any>} An async iterator that yields values.
      * @async
      */
-    values(): AsyncGenerator<any>;
+    values(options?: SignalOptions): AsyncGenerator<any>;
     /**
      * Asynchronously emit all { key, value } pairs that exist within this `IAMap`, including its children. This will
      * cause a full traversal of all nodes.
      *
+     * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
      * @returns {AsyncGenerator<{ key: Uint8Array, value: any}>} An async iterator that yields objects with the properties `key` and `value`.
      * @async
      */
-    entries(): AsyncGenerator<{
+    entries(options?: SignalOptions): AsyncGenerator<{
         key: Uint8Array;
         value: any;
     }>;
     /**
      * Asynchronously emit the IDs of this `IAMap` and all of its children.
      *
+     * @param {SignalOptions} [options] - Optional parameters. `signal` can be used to abort the operation.
      * @returns {AsyncGenerator<any>} An async iterator that yields the ID of this `IAMap` and all of its children. The type of ID is
      * determined by the backing store which is responsible for generating IDs upon `save()` operations.
      */
-    ids(): AsyncGenerator<any>;
+    ids(options?: SignalOptions): AsyncGenerator<any>;
     /**
      * Returns a serialisable form of this `IAMap` node. The internal representation of this local node is copied into a plain
      * JavaScript `Object` including a representation of its data array that the key/value pairs it contains as well as
@@ -359,6 +370,22 @@ export type SerializedKV = import("./interface").SerializedKV;
 export type SerializedElement = import("./interface").SerializedElement;
 export type SerializedNode = import("./interface").SerializedNode;
 export type SerializedRoot = import("./interface").SerializedRoot;
+export type StoreOperationOptions = import("./interface").StoreOperationOptions;
+export type SetOptions = {
+    signal?: AbortSignal;
+    _cachedHash?: Uint8Array;
+};
+export type GetOptions = {
+    signal?: AbortSignal;
+    _cachedHash?: Uint8Array;
+};
+export type DeleteOptions = {
+    signal?: AbortSignal;
+    _cachedHash?: Uint8Array;
+};
+export type SignalOptions = {
+    signal?: AbortSignal;
+};
 export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
 export type Registry = {
     hasher: Hasher;
