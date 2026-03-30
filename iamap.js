@@ -7,16 +7,16 @@ const defaultBucketSize = 5 // array size for a bucket of values
 
 /**
  * @template T
- * @typedef {import('./interface').Store<T>} Store<T>
+ * @typedef {import('./interface.js').Store<T>} Store<T>
  */
 /**
- * @typedef {import('./interface').Config} Config
- * @typedef {import('./interface').Options} Options
- * @typedef {import('./interface').SerializedKV} SerializedKV
- * @typedef {import('./interface').SerializedElement} SerializedElement
- * @typedef {import('./interface').SerializedNode} SerializedNode
- * @typedef {import('./interface').SerializedRoot} SerializedRoot
- * @typedef {import('./interface').StoreOperationOptions} StoreOperationOptions
+ * @typedef {import('./interface.js').Config} Config
+ * @typedef {import('./interface.js').Options} Options
+ * @typedef {import('./interface.js').SerializedKV} SerializedKV
+ * @typedef {import('./interface.js').SerializedElement} SerializedElement
+ * @typedef {import('./interface.js').SerializedNode} SerializedNode
+ * @typedef {import('./interface.js').SerializedRoot} SerializedRoot
+ * @typedef {import('./interface.js').StoreOperationOptions} StoreOperationOptions
  * @typedef {{ signal?: AbortSignal, _cachedHash?: Uint8Array }} SetOptions
  * @typedef {{ signal?: AbortSignal, _cachedHash?: Uint8Array }} GetOptions
  * @typedef {{ signal?: AbortSignal, _cachedHash?: Uint8Array }} DeleteOptions
