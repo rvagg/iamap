@@ -1,3 +1,10 @@
+## [5.1.1](https://github.com/rvagg/iamap/compare/v5.1.0...v5.1.1) (2026-03-30)
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 5.9.3 to 6.0.2 ([3c7829f](https://github.com/rvagg/iamap/commit/3c7829f26c04f0d646f86c303aca1d0af73885bb))
+* update deps and fix for typescript 6 ([fac36ad](https://github.com/rvagg/iamap/commit/fac36ad92e47d8df089760abd34d301ccdf2c149))
+
 ## [5.1.0](https://github.com/rvagg/iamap/compare/v5.0.0...v5.1.0) (2026-02-16)
 
 ### Features
