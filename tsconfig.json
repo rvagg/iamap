@@ -17,16 +17,15 @@
     "alwaysStrict": true,
     "esModuleInterop": true,
     "target": "ES2018",
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "declaration": true,
     "declarationMap": true,
     "outDir": "types",
     "skipLibCheck": true,
     "stripInternal": true,
     "resolveJsonModule": true,
-    "emitDeclarationOnly": true,
-    "baseUrl": "."
+    "emitDeclarationOnly": true
   },
   "exclude": [
     "./node_modules",

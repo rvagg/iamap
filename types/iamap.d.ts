@@ -163,13 +163,13 @@ export class IAMap<T> {
      * @param {Element[]} [data]
      */
     constructor(store: Store<T>, options?: Options, map?: Uint8Array, depth?: number, data?: Element[]);
-    store: import("./interface").Store<T>;
+    store: import("./interface.js").Store<T>;
     /**
      * @ignore
      * @type {any|null}
      */
     id: any | null;
-    config: import("./interface").Config;
+    config: import("./interface.js").Config;
     map: Uint8Array<ArrayBufferLike>;
     depth: number;
     /**
@@ -363,14 +363,14 @@ export namespace IAMap {
 /**
  * <T>
  */
-export type Store<T> = import("./interface").Store<T>;
-export type Config = import("./interface").Config;
-export type Options = import("./interface").Options;
-export type SerializedKV = import("./interface").SerializedKV;
-export type SerializedElement = import("./interface").SerializedElement;
-export type SerializedNode = import("./interface").SerializedNode;
-export type SerializedRoot = import("./interface").SerializedRoot;
-export type StoreOperationOptions = import("./interface").StoreOperationOptions;
+export type Store<T> = import("./interface.js").Store<T>;
+export type Config = import("./interface.js").Config;
+export type Options = import("./interface.js").Options;
+export type SerializedKV = import("./interface.js").SerializedKV;
+export type SerializedElement = import("./interface.js").SerializedElement;
+export type SerializedNode = import("./interface.js").SerializedNode;
+export type SerializedRoot = import("./interface.js").SerializedRoot;
+export type StoreOperationOptions = import("./interface.js").StoreOperationOptions;
 export type SetOptions = {
     signal?: AbortSignal;
     _cachedHash?: Uint8Array;
