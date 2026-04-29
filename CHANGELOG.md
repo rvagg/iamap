@@ -1,3 +1,9 @@
+## [5.1.3](https://github.com/rvagg/iamap/compare/v5.1.2...v5.1.3) (2026-04-29)
+
+### Trivial Changes
+
+* **deps:** bump actions/setup-node from 6.3.0 to 6.4.0 ([#80](https://github.com/rvagg/iamap/issues/80)) ([bc5aa2a](https://github.com/rvagg/iamap/commit/bc5aa2af5815abe0e7b289ace76d5835d936ec23))
+
 ## [5.1.2](https://github.com/rvagg/iamap/compare/v5.1.1...v5.1.2) (2026-04-28)
 
 ### Trivial Changes
