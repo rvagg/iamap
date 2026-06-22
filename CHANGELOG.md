@@ -1,3 +1,10 @@
+## [5.1.4](https://github.com/rvagg/iamap/compare/v5.1.3...v5.1.4) (2026-06-22)
+
+### Trivial Changes
+
+* **deps:** bump actions/checkout from 6 to 7 ([#82](https://github.com/rvagg/iamap/issues/82)) ([4a54b1e](https://github.com/rvagg/iamap/commit/4a54b1e392da15f489e16c40d9628ab985d74725))
+* remove c8 support ([#83](https://github.com/rvagg/iamap/issues/83)) ([466ea7d](https://github.com/rvagg/iamap/commit/466ea7ddb0c1e2f9d09f7e75e8cb253ad489d85e))
+
 ## [5.1.3](https://github.com/rvagg/iamap/compare/v5.1.2...v5.1.3) (2026-04-29)
 
 ### Trivial Changes
