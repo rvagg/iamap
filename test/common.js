@@ -83,7 +83,6 @@ function toBytes (obj) {
   if (ArrayBuffer.isView(obj)) {
     return new Uint8Array(obj.buffer, obj.byteOffset, obj.byteLength)
   }
-  /* c8 ignore next */
   throw new Error('Unknown type, must be binary type')
 }
 

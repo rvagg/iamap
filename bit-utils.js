@@ -48,7 +48,6 @@ export function setBit (bitmap, position, set) {
  */
 export function bitmapHas (bitmap, position, byte, offset) {
   if (typeof byte !== 'number' || typeof offset !== 'number') {
-    /* c8 ignore next 3 */
     if (position === undefined) {
       throw new Error('`position` expected')
     }
