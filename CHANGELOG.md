@@ -1,3 +1,5 @@
+## [5.1.5](https://github.com/rvagg/iamap/compare/v5.1.4...v5.1.5) (2026-07-03)
+
 ## [5.1.4](https://github.com/rvagg/iamap/compare/v5.1.3...v5.1.4) (2026-06-22)
 
 ### Trivial Changes
