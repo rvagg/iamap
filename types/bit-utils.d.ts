@@ -4,7 +4,7 @@
  * @param {number} nbits
  * @returns {number}
  */
-export function mask(hash: Uint8Array, depth: number, nbits: number): number;
+export declare function mask(hash: Uint8Array, depth: number, nbits: number): number;
 /**
  * set the `position` bit in the given `bitmap` to be `set` (truthy=1, falsey=0)
  * @param {Uint8Array} bitmap
@@ -12,7 +12,7 @@ export function mask(hash: Uint8Array, depth: number, nbits: number): number;
  * @param {boolean|0|1} set
  * @returns {Uint8Array}
  */
-export function setBit(bitmap: Uint8Array, position: number, set: boolean | 0 | 1): Uint8Array;
+export declare function setBit(bitmap: Uint8Array, position: number, set: boolean | 0 | 1): Uint8Array;
 /**
  * check whether `bitmap` has a `1` at the given `position` bit
  * @param {Uint8Array} bitmap
@@ -21,7 +21,7 @@ export function setBit(bitmap: Uint8Array, position: number, set: boolean | 0 | 
  * @param {number} [offset]
  * @returns {boolean}
  */
-export function bitmapHas(bitmap: Uint8Array, position?: number, byte?: number, offset?: number): boolean;
+export declare function bitmapHas(bitmap: Uint8Array, position?: number, byte?: number, offset?: number): boolean;
 /**
  * count how many `1` bits are in `bitmap up until `position`
  * tells us where in the compacted element array an element should live
@@ -31,5 +31,5 @@ export function bitmapHas(bitmap: Uint8Array, position?: number, byte?: number, 
  * @param {number} position
  * @returns {number}
  */
-export function index(bitmap: Uint8Array, position: number): number;
+export declare function index(bitmap: Uint8Array, position: number): number;
 //# sourceMappingURL=bit-utils.d.ts.map

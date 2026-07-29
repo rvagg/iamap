@@ -1,3 +1,46 @@
+export type Store<T> = import('./interface.js').Store<T>;
+export type Config = import('./interface.js').Config;
+export type Options = import('./interface.js').Options;
+export type SerializedKV = import('./interface.js').SerializedKV;
+export type SerializedElement = import('./interface.js').SerializedElement;
+export type SerializedNode = import('./interface.js').SerializedNode;
+export type SerializedRoot = import('./interface.js').SerializedRoot;
+export type StoreOperationOptions = import('./interface.js').StoreOperationOptions;
+export type SetOptions = {
+    signal?: AbortSignal;
+    _cachedHash?: Uint8Array;
+};
+export type GetOptions = {
+    signal?: AbortSignal;
+    _cachedHash?: Uint8Array;
+};
+export type DeleteOptions = {
+    signal?: AbortSignal;
+    _cachedHash?: Uint8Array;
+};
+export type SignalOptions = {
+    signal?: AbortSignal;
+};
+export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
+export type Registry = {
+    hasher: Hasher;
+    hashBytes: number;
+}[];
+export type IsLink = (link: any) => boolean;
+export type ReadonlyElement = readonly Element[];
+export type FoundElement = {
+    data?: {
+        found: boolean;
+        elementAt: number;
+        element: Element;
+        bucketIndex?: number;
+        bucketEntry?: KV;
+    };
+    link?: {
+        elementAt: number;
+        element: Element;
+    };
+};
 /**
  * ```js
  * let map = await iamap.create(store, options)
@@ -48,7 +91,7 @@
  * @param {Element[]} [data] - for internal use
  * @param {AbortSignal} [signal] - An optional AbortSignal that can be used to cancel the operation
  */
-export function create<T>(store: Store<T>, options: Options, map?: Uint8Array, depth?: number, data?: Element[], signal?: AbortSignal): Promise<IAMap<T>>;
+export declare function create<T>(store: Store<T>, options: Options, map?: Uint8Array, depth?: number, data?: Element[], signal?: AbortSignal): Promise<IAMap<T>>;
 /**
  * ```js
  * let map = await iamap.load(store, id)
@@ -66,7 +109,7 @@ export function create<T>(store: Store<T>, options: Options, map?: Uint8Array, d
  * @param {Options} [options]
  * @param {AbortSignal} [signal] - An optional AbortSignal that can be used to cancel the operation
  */
-export function load<T>(store: Store<T>, id: any, depth?: number, options?: Options, signal?: AbortSignal): Promise<IAMap<T>>;
+export declare function load<T>(store: Store<T>, id: any, depth?: number, options?: Options, signal?: AbortSignal): Promise<IAMap<T>>;
 /**
  * ```js
  * iamap.registerHasher(hashAlg, hashBytes, hasher)
@@ -84,52 +127,40 @@ export function load<T>(store: Store<T>, id: any, depth?: number, options?: Opti
  * Map and returns a `Uint8Array` (or a `Uint8Array`-like, such that each data element of the array contains a single byte value). The function
  * may or may not be asynchronous but will be called with an `await`.
  */
-export function registerHasher(hashAlg: number, hashBytes: number, hasher: Hasher): void;
+export declare function registerHasher(hashAlg: number, hashBytes: number, hasher: Hasher): void;
 /**
- * Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
- * an IAMap before trying to instantiate it.
- *
- * @name iamap.isRootSerializable
- * @function
- * @param {any} serializable An object that may be a serialisable form of an IAMap root node
- * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
+ * @ignore
  */
-export function isRootSerializable(serializable: any): boolean;
-/**
- * Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
- * an IAMap node before trying to instantiate it.
- * This should pass for both root nodes as well as child nodes
- *
- * @name iamap.isSerializable
- * @function
- * @param {any} serializable An object that may be a serialisable form of an IAMap node
- * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
- */
-export function isSerializable(serializable: any): boolean;
-/**
- * Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
- * produced by {@link IAMap#toSerializable}.
- * Serialised forms of root nodes must satisfy both {@link iamap.isRootSerializable} and {@link iamap.isSerializable}. For
- * root nodes, the `options` parameter will be ignored and the `depth` parameter must be the default value of `0`.
- * Serialised forms of non-root nodes must satisfy {@link iamap.isSerializable} and have a valid `options` parameter and
- * a non-`0` `depth` parameter.
- *
- * @name iamap.fromSerializable
- * @function
- * @template T
- * @param {Store<T>} store A backing store for this Map. See {@link iamap.create}.
- * @param {any} id An optional ID for the instantiated IAMap node. Unlike {@link iamap.create},
- * `fromSerializable()` does not `save()` a newly created IAMap node so an ID is not generated for it. If one is
- * required for downstream purposes it should be provided, if the value is `null` or `undefined`, `node.id` will
- * be `null` but will remain writable.
- * @param {any} serializable The serializable form of an IAMap node to be instantiated
- * @param {Options} [options=null] An options object for IAMap child node instantiation. Will be ignored for root
- * node instantiation (where `depth` = `0`) See {@link iamap.create}.
- * @param {number} [depth=0] The depth of the IAMap node. Where `0` is the root node and any `>0` number is a child
- * node.
- * @returns {IAMap<T>}
- */
-export function fromSerializable<T>(store: Store<T>, id: any, serializable: any, options?: Options, depth?: number): IAMap<T>;
+declare class KV {
+    key: Uint8Array<ArrayBufferLike>;
+    value: any;
+    /**
+     * @ignore
+     * @param {Uint8Array} key
+     * @param {any} value
+     */
+    constructor(key: Uint8Array, value: any);
+    /**
+     * @ignore
+     * @returns {SerializedKV}
+     */
+    toSerializable(): SerializedKV;
+}
+declare class Element {
+    bucket: KV[] | null;
+    link: any;
+    /**
+     * @ignore
+     * @param {KV[]} [bucket]
+     * @param {any} [link]
+     */
+    constructor(bucket?: KV[], link?: any);
+    /**
+     * @ignore
+     * @returns {SerializedElement}
+     */
+    toSerializable(): SerializedElement;
+}
 /**
  * Immutable Asynchronous Map
  *
@@ -153,16 +184,7 @@ export function fromSerializable<T>(store: Store<T>, id: any, serializable: any,
  * bucket of entries or an ID of a child node
  * See {@link iamap.create} for more details.
  */
-export class IAMap<T> {
-    /**
-     * @ignore
-     * @param {Store<T>} store
-     * @param {Options} [options]
-     * @param {Uint8Array} [map]
-     * @param {number} [depth]
-     * @param {Element[]} [data]
-     */
-    constructor(store: Store<T>, options?: Options, map?: Uint8Array, depth?: number, data?: Element[]);
+export declare class IAMap<T> {
     store: import("./interface.js").Store<T>;
     /**
      * @ignore
@@ -177,6 +199,15 @@ export class IAMap<T> {
      * @type {ReadonlyElement}
      */
     data: ReadonlyElement;
+    /**
+     * @ignore
+     * @param {Store<T>} store
+     * @param {Options} [options]
+     * @param {Uint8Array} [map]
+     * @param {number} [depth]
+     * @param {Element[]} [data]
+     */
+    constructor(store: Store<T>, options?: Options, map?: Uint8Array, depth?: number, data?: Element[]);
     /**
      * Asynchronously create a new `IAMap` instance identical to this one but with `key` set to `value`.
      *
@@ -352,109 +383,53 @@ export class IAMap<T> {
     */
     fromChildSerializable(id: any, serializable: any, depth?: number): IAMap<T>;
 }
-export namespace IAMap {
-    /**
-     * @template T
-     * @param {IAMap<T> | any} node
-     * @returns {boolean}
-     */
-    function isIAMap<T_1>(node: IAMap<T_1> | any): boolean;
+export declare namespace IAMap {
+    var isIAMap: <T>(node: IAMap<T> | any) => boolean;
 }
 /**
- * <T>
+ * Determine if a serializable object is an IAMap root type, can be used to assert whether a data block is
+ * an IAMap before trying to instantiate it.
+ *
+ * @name iamap.isRootSerializable
+ * @function
+ * @param {any} serializable An object that may be a serialisable form of an IAMap root node
+ * @returns {boolean} An indication that the serialisable form is or is not an IAMap root node
  */
-export type Store<T> = import("./interface.js").Store<T>;
-export type Config = import("./interface.js").Config;
-export type Options = import("./interface.js").Options;
-export type SerializedKV = import("./interface.js").SerializedKV;
-export type SerializedElement = import("./interface.js").SerializedElement;
-export type SerializedNode = import("./interface.js").SerializedNode;
-export type SerializedRoot = import("./interface.js").SerializedRoot;
-export type StoreOperationOptions = import("./interface.js").StoreOperationOptions;
-export type SetOptions = {
-    signal?: AbortSignal;
-    _cachedHash?: Uint8Array;
-};
-export type GetOptions = {
-    signal?: AbortSignal;
-    _cachedHash?: Uint8Array;
-};
-export type DeleteOptions = {
-    signal?: AbortSignal;
-    _cachedHash?: Uint8Array;
-};
-export type SignalOptions = {
-    signal?: AbortSignal;
-};
-export type Hasher = (inp: Uint8Array) => (Uint8Array | Promise<Uint8Array>);
-export type Registry = {
-    hasher: Hasher;
-    hashBytes: number;
-}[];
-export type IsLink = (link: any) => boolean;
-export type ReadonlyElement = readonly Element[];
-export type FoundElement = {
-    data?: {
-        found: boolean;
-        elementAt: number;
-        element: Element;
-        bucketIndex?: number;
-        bucketEntry?: KV;
-    };
-    link?: {
-        elementAt: number;
-        element: Element;
-    };
-};
-declare class Element {
-    /**
-     * @ignore
-     * @param {KV[]} [bucket]
-     * @param {any} [link]
-     */
-    constructor(bucket?: KV[], link?: any);
-    bucket: KV[] | null;
-    link: any;
-    /**
-     * @ignore
-     * @returns {SerializedElement}
-     */
-    toSerializable(): SerializedElement;
-}
-declare namespace Element {
-    /**
-     * @ignore
-     * @param {IsLink} isLink
-     * @param {any} obj
-     * @returns {Element}
-     */
-    function fromSerializable(isLink: IsLink, obj: any): Element;
-}
+export declare function isRootSerializable(serializable: any): boolean;
 /**
- * @ignore
+ * Determine if a serializable object is an IAMap node type, can be used to assert whether a data block is
+ * an IAMap node before trying to instantiate it.
+ * This should pass for both root nodes as well as child nodes
+ *
+ * @name iamap.isSerializable
+ * @function
+ * @param {any} serializable An object that may be a serialisable form of an IAMap node
+ * @returns {boolean} An indication that the serialisable form is or is not an IAMap node
  */
-declare class KV {
-    /**
-     * @ignore
-     * @param {Uint8Array} key
-     * @param {any} value
-     */
-    constructor(key: Uint8Array, value: any);
-    key: Uint8Array<ArrayBufferLike>;
-    value: any;
-    /**
-     * @ignore
-     * @returns {SerializedKV}
-     */
-    toSerializable(): SerializedKV;
-}
-declare namespace KV {
-    /**
-     * @ignore
-     * @param {SerializedKV} obj
-     * @returns {KV}
-     */
-    function fromSerializable(obj: SerializedKV): KV;
-}
+export declare function isSerializable(serializable: any): boolean;
+/**
+ * Instantiate an IAMap from a valid serialisable form of an IAMap node. The serializable should be the same as
+ * produced by {@link IAMap#toSerializable}.
+ * Serialised forms of root nodes must satisfy both {@link iamap.isRootSerializable} and {@link iamap.isSerializable}. For
+ * root nodes, the `options` parameter will be ignored and the `depth` parameter must be the default value of `0`.
+ * Serialised forms of non-root nodes must satisfy {@link iamap.isSerializable} and have a valid `options` parameter and
+ * a non-`0` `depth` parameter.
+ *
+ * @name iamap.fromSerializable
+ * @function
+ * @template T
+ * @param {Store<T>} store A backing store for this Map. See {@link iamap.create}.
+ * @param {any} id An optional ID for the instantiated IAMap node. Unlike {@link iamap.create},
+ * `fromSerializable()` does not `save()` a newly created IAMap node so an ID is not generated for it. If one is
+ * required for downstream purposes it should be provided, if the value is `null` or `undefined`, `node.id` will
+ * be `null` but will remain writable.
+ * @param {any} serializable The serializable form of an IAMap node to be instantiated
+ * @param {Options} [options=null] An options object for IAMap child node instantiation. Will be ignored for root
+ * node instantiation (where `depth` = `0`) See {@link iamap.create}.
+ * @param {number} [depth=0] The depth of the IAMap node. Where `0` is the root node and any `>0` number is a child
+ * node.
+ * @returns {IAMap<T>}
+ */
+export declare function fromSerializable<T>(store: Store<T>, id: any, serializable: any, options?: Options, depth?: number): IAMap<T>;
 export {};
 //# sourceMappingURL=iamap.d.ts.map
