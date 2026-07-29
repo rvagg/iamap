@@ -1023,12 +1023,6 @@ async function collapseNodeInline (node, bitpos, newNode, signal) {
  * @returns {Config}
  */
 function buildConfig (options) {
-  /**
-   * @ignore
-   * @type {Config}
-   */
-  const config = {}
-
   if (!options) {
     throw new TypeError('Invalid `options` object')
   }
@@ -1039,35 +1033,27 @@ function buildConfig (options) {
   if (!hasherRegistry[options.hashAlg]) {
     throw new TypeError(`Unknown hashAlg: '${options.hashAlg}'`)
   }
-  config.hashAlg = options.hashAlg
 
+  let bitWidth = defaultBitWidth
   if (options.bitWidth !== undefined) {
-    if (Number.isInteger(options.bitWidth)) {
-      if (options.bitWidth < 3 || options.bitWidth > 16) {
-        throw new TypeError('Invalid `bitWidth` option, must be between 3 and 16')
-      }
-      config.bitWidth = options.bitWidth
-    } else {
+    if (!Number.isInteger(options.bitWidth)) {
       throw new TypeError('Invalid `bitWidth` option')
     }
-  } else {
-    config.bitWidth = defaultBitWidth
+    if (options.bitWidth < 3 || options.bitWidth > 16) {
+      throw new TypeError('Invalid `bitWidth` option, must be between 3 and 16')
+    }
+    bitWidth = options.bitWidth
   }
 
+  let bucketSize = defaultBucketSize
   if (options.bucketSize !== undefined) {
-    if (Number.isInteger(options.bucketSize)) {
-      if (options.bucketSize < 2) {
-        throw new TypeError('Invalid `bucketSize` option')
-      }
-      config.bucketSize = options.bucketSize
-    } else {
+    if (!Number.isInteger(options.bucketSize) || options.bucketSize < 2) {
       throw new TypeError('Invalid `bucketSize` option')
     }
-  } else {
-    config.bucketSize = defaultBucketSize
+    bucketSize = options.bucketSize
   }
 
-  return config
+  return { hashAlg: options.hashAlg, bitWidth, bucketSize }
 }
 
 /**
