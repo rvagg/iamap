@@ -39,7 +39,7 @@
     "@types/chai": "^5.2.3",
     "@types/mocha": "^10.0.10",
     "chai": "^6.2.2",
-    "conventional-changelog-conventionalcommits": "^10.2.0",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
     "jsdoc4readme": "^1.4.0",
     "mocha": "^11.7.5",
     "murmurhash3js-revisited": "^3.0.0",
@@ -122,6 +122,30 @@
                 "section": "Bug Fixes"
               },
               {
+                "type": "perf",
+                "section": "Performance Improvements"
+              },
+              {
+                "type": "revert",
+                "section": "Reverts"
+              },
+              {
+                "type": "refactor",
+                "section": "Code Refactoring"
+              },
+              {
+                "type": "test",
+                "section": "Tests"
+              },
+              {
+                "type": "build",
+                "section": "Trivial Changes"
+              },
+              {
+                "type": "ci",
+                "section": "Trivial Changes"
+              },
+              {
                 "type": "chore",
                 "section": "Trivial Changes"
               },
@@ -130,8 +154,8 @@
                 "section": "Trivial Changes"
               },
               {
-                "type": "test",
-                "section": "Tests"
+                "type": "style",
+                "section": "Trivial Changes"
               }
             ]
           }
