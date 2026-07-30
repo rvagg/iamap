@@ -1,3 +1,11 @@
+## [5.1.7](https://github.com/rvagg/iamap/compare/v5.1.6...v5.1.7) (2026-07-30)
+
+### Trivial Changes
+
+* **deps-dev:** bump typescript from 6.0.3 to 7.0.2 ([e7abe3a](https://github.com/rvagg/iamap/commit/e7abe3a9de831f77d73804df927f6d1bd056f623))
+* downgrade broken changelog maker, backfill entries ([#88](https://github.com/rvagg/iamap/issues/88)) ([4e377f5](https://github.com/rvagg/iamap/commit/4e377f56ff13e60ac8190c0e367a7abe2b2979e7))
+* fixes for ts@7 ([93da2b7](https://github.com/rvagg/iamap/commit/93da2b72fde3f23eedd250e4474878b9db68efdf))
+
 ## [5.1.6](https://github.com/rvagg/iamap/compare/v5.1.5...v5.1.6) (2026-07-21)
 
 ### Trivial Changes
