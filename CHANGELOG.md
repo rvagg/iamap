@@ -1,6 +1,14 @@
 ## [5.1.6](https://github.com/rvagg/iamap/compare/v5.1.5...v5.1.6) (2026-07-21)
 
+### Trivial Changes
+
+* **ci:** slow down dependabot, add depsound, pin actions by hash ([#87](https://github.com/rvagg/iamap/issues/87)) ([fb39007](https://github.com/rvagg/iamap/commit/fb39007bd894a0fbf0ab5843de82d0025856911d))
+
 ## [5.1.5](https://github.com/rvagg/iamap/compare/v5.1.4...v5.1.5) (2026-07-03)
+
+### Trivial Changes
+
+* **deps-dev:** bump conventional-changelog-conventionalcommits ([#84](https://github.com/rvagg/iamap/issues/84)) ([6eff0da](https://github.com/rvagg/iamap/commit/6eff0dac86336ad2cdb7e00905a9806124abf1c4))
 
 ## [5.1.4](https://github.com/rvagg/iamap/compare/v5.1.3...v5.1.4) (2026-06-22)
 
