@@ -1,3 +1,9 @@
+## [5.1.8](https://github.com/rvagg/iamap/compare/v5.1.7...v5.1.8) (2026-07-31)
+
+### Trivial Changes
+
+* **deps:** bump the github-actions-minor-patch group with 2 updates ([#89](https://github.com/rvagg/iamap/issues/89)) ([64f6b75](https://github.com/rvagg/iamap/commit/64f6b75a4fb787aff333ceb93412cc3501f2dbda))
+
 ## [5.1.7](https://github.com/rvagg/iamap/compare/v5.1.6...v5.1.7) (2026-07-30)
 
 ### Trivial Changes
