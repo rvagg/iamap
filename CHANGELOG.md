@@ -1,3 +1,9 @@
+## [5.1.12](https://github.com/rvagg/iamap/compare/v5.1.11...v5.1.12) (2026-08-21)
+
+### Reverts
+
+* Revert "chore(deps-dev): bump conventional-changelog-conventionalcommits ([#92](https://github.com/rvagg/iamap/issues/92))" ([#94](https://github.com/rvagg/iamap/issues/94)) ([200a91c](https://github.com/rvagg/iamap/commit/200a91c887cb48afbe518da4192a1cf604f81333))
+
 ## [5.1.11](https://github.com/rvagg/iamap/compare/v5.1.10...v5.1.11) (2026-08-17)
 
 ## [5.1.10](https://github.com/rvagg/iamap/compare/v5.1.9...v5.1.10) (2026-08-03)
