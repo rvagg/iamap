@@ -1,3 +1,9 @@
+## [5.1.13](https://github.com/rvagg/iamap/compare/v5.1.12...v5.1.13) (2026-10-02)
+
+### Trivial Changes
+
+* **deps-dev:** bump mocha from 11.8.0 to 12.0.2 ([#97](https://github.com/rvagg/iamap/issues/97)) ([6d2da0c](https://github.com/rvagg/iamap/commit/6d2da0c237d729bb7f88b83d9d42970cb6d53a7f))
+
 ## [5.1.12](https://github.com/rvagg/iamap/compare/v5.1.11...v5.1.12) (2026-08-21)
 
 ### Reverts
