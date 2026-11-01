@@ -26,7 +26,7 @@
   "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
   "license": "Apache-2.0",
   "dependencies": {
-    "bit-sequence": "^1.2.0"
+    "bit-sequence": "^2.0.0"
   },
   "devDependencies": {
     "@rvagg/chai-as-promised": "^8.0.2",
