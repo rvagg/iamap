@@ -1,3 +1,10 @@
+## [5.1.15](https://github.com/rvagg/iamap/compare/v5.1.14...v5.1.15) (2026-11-02)
+
+### Trivial Changes
+
+* **deps:** bump bit-sequence from 1.2.17 to 2.0.0 ([#101](https://github.com/rvagg/iamap/issues/101)) ([4628634](https://github.com/rvagg/iamap/commit/462863437f7ce539628d11431d4c295618ca4333))
+* **deps:** bump the github-actions-minor-patch group with 2 updates ([#99](https://github.com/rvagg/iamap/issues/99)) ([76d19d4](https://github.com/rvagg/iamap/commit/76d19d4eac531f38ee4068186267036a73d0bcb4))
+
 ## [5.1.14](https://github.com/rvagg/iamap/compare/v5.1.13...v5.1.14) (2026-10-19)
 
 ### Trivial Changes
